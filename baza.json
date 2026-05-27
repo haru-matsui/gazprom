@@ -1,0 +1,472 @@
+{
+  "regions": [
+    {
+      "id": 1,
+      "name": "Калужская область (ОЭЗ ППТ Калуга - Людиново)",
+      "coordinates": {
+        "lat": 53.817068,
+        "lon": 34.520577
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 360,
+        "distance_to_polyurethane_km": 330,
+        "distance_to_highway_km": 25
+      },
+      "economics": {
+        "has_oez_benefits": true,
+        "has_insurance_benefits": true,
+        "energy_tariff_rub_kwh": 6.5,
+        "average_salary_rub": 104200,
+        "ecological_class_iza": "Низкий"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 45000,
+        "distance_to_substation_km": 0.5,
+        "connection_cost_rub_kwt": 0
+      },
+      "social": {
+        "city_environment_index": 172,
+        "kindergarten_occupancy_per_100_kids": 118,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 15000
+      },
+      "cultural_code": {
+        "scoring_style_tags": [
+          "techno",
+          "authentic"
+        ],
+        "architecture_style": "Промышленный эклектизм конца XIX века (традиции Людиновского железоделательного завода), элементы классицизма in старой городской застройке и строгий современный хай-тек/минимализм новых индустриальных объектов ОЭЗ.",
+        "materials": "Красный кирпич старинной кладки, литейный чугун и фактурное железо (исторический бэкграунд Демидовских заводов), светлые композитные панели с текстурой шлифованного серого камня.",
+        "color_profile": [
+          "#4A5056",
+          "#8B261E",
+          "#2B2D2F",
+          "#E9EBEF"
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "name": "Калужская область (Индустриальный парк Ворсино)",
+      "coordinates": {
+        "lat": 55.229358,
+        "lon": 36.682570
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 110,
+        "distance_to_polyurethane_km": 95,
+        "distance_to_highway_km": 0
+      },
+      "economics": {
+        "has_oez_benefits": true,
+        "has_insurance_benefits": true,
+        "energy_tariff_rub_kwh": 5.24,
+        "average_salary_rub": 104200,
+        "ecological_class_iza": "Низкий"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 350000,
+        "distance_to_substation_km": 0.5,
+        "connection_cost_rub_kwt": 12500
+      },
+      "social": {
+        "city_environment_index": 241,
+        "kindergarten_occupancy_per_100_kids": 100,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 25000
+      },
+      "cultural_code": {
+        "scoring_style_tags": [
+          "techno",
+          "authentic"
+        ],
+        "architecture_style": "Эклектичный промышленный конструктивизм и функциональный хай-тек с отсылками к космизму (родина Циолковского). В историческом ядре городов региона доминирует провинциальный классицизм XVIII–XIX веков и традиционное русское барокко.",
+        "materials": "Облицовочный красный и светлый кирпич (традиции локальных керамических заводов), фактурный серый бетон, матовые металлические панели, элементы из натурального дерева хвойных пород.",
+        "color_profile": [
+          "#1E3F20",
+          "#A04E3A",
+          "#3F4245",
+          "#E2E5E6"
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "name": "Липецкая область (ОЭЗ ППТ Липецк - Грязинская площадка)",
+      "coordinates": {
+        "lat": 52.622031,
+        "lon": 38.675743
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 15,
+        "distance_to_polyurethane_km": 210,
+        "distance_to_highway_km": 2
+      },
+      "economics": {
+        "has_oez_benefits": true,
+        "has_insurance_benefits": true,
+        "energy_tariff_rub_kwh": 4.95,
+        "average_salary_rub": 72400,
+        "ecological_class_iza": "Повышенный"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 210000,
+        "distance_to_substation_km": 0.2,
+        "connection_cost_rub_kwt": 0
+      },
+      "social": {
+        "city_environment_index": 226,
+        "kindergarten_occupancy_per_100_kids": 114,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 18000
+      },
+      "cultural_code": {
+        "scoring_style_tags": [
+          "techno"
+        ],
+        "architecture_style": "Масштабный советский индустриальный модернизм с жесткой геометрией и монументальными формами, переходящий на территории ОЭЗ в ультрасовременный хай-тек и динамичный промышленный урбанизм (стеклянные фасады административных центров и ровные линии модульных цехов).",
+        "materials": "Листовой и рулонный металл во всех проявлениях (сталь, алюминиевые композиты), гладкий шлихованный бетон, панорамное тонированное стекло, элементы из темно-серого гранита.",
+        "color_profile": [
+          "#8A9597",
+          "#D95D2B",
+          "#2B2C2C",
+          "#F4F5F6"
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "name": "Липецкая область (Индустриальный парк «Кузнецкая слобода»)",
+      "coordinates": {
+        "lat": 53.020002,
+        "lon": 39.125772
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 420,
+        "distance_to_polyurethane_km": 120,
+        "distance_to_highway_km": 1
+      },
+      "economics": {
+        "has_oez_benefits": true,
+        "has_insurance_benefits": true,
+        "energy_tariff_rub_kwh": 4.80,
+        "average_salary_rub": 58600,
+        "ecological_class_iza": "Низкий"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 24000,
+        "distance_to_substation_km": 0.3,
+        "connection_cost_rub_kwt": 14000
+      },
+      "social": {
+        "city_environment_index": 214,
+        "kindergarten_occupancy_per_100_kids": 105,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 12000
+      },
+      "cultural_code": {
+        "scoring_style_tags": [
+          "authentic",
+          "eco"
+        ],
+        "architecture_style": "Промышленная архитектура Поволжья с элементами купеческого кирпичного стиля конца XIX века. Современные корпуса сочетают утилитарный индустриальный минимализм (прямоугольные объемы из сэндвич-панелей) и аккуратные малые архитектурные формы, свойственные мебельной столице региона.",
+        "materials": "Облицовочный клинкерный кирпич глубоких тонов, шлихованное дерево во внешней отделке входных групп (отсылка к развитому деревообрабатывающему кластеру), матовый профилированный металл светлых оттенков.",
+        "color_profile": [
+          "#C18A46",
+          "#4A3B32",
+          "#E8DCC4",
+          "#464A4D"
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "name": "Московская область (ОЭЗ ТВТ Дубна)",
+      "coordinates": {
+        "lat": 56.753212,
+        "lon": 37.165298
+      },
+      "logistics": {
+        "has_railway": false,
+        "distance_to_steel_km": 240,
+        "distance_to_polyurethane_km": 110,
+        "distance_to_highway_km": 4
+      },
+      "economics": {
+        "has_oez_benefits": true,
+        "has_insurance_benefits": true,
+        "energy_tariff_rub_kwh": 6.12,
+        "average_salary_rub": 118400,
+        "ecological_class_iza": "Низкий"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 50000,
+        "distance_to_substation_km": 0.4,
+        "connection_cost_rub_kwt": 0
+      },
+      "social": {
+        "city_environment_index": 247,
+        "kindergarten_occupancy_per_100_kids": 102,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 28000
+      },
+      "cultural_code": {
+        "scoring_style_tags": [
+          "techno"
+        ],
+        "architecture_style": "Советский модернизм наукоградов в сочетании со строгим современным европейским минимализмом и деконструктивизмом. Архитектура ОЭЗ отличается панорамным остеклением, вентилируемыми фасадами четких геометрических форм и технологичным оформлением въездных групп.",
+        "materials": "Фасадное тонированное стекло, композитные панели под матовый графит и шлихованный титан, светлая штукатурка, элементы из анодированного алюминия.",
+        "color_profile": [
+          "#2E4057",
+          "#F8F9FA",
+          "#4E5154",
+          "#00A8E8"
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "name": "Республика Башкортостан (ОЭЗ ППТ «Алга»)",
+      "coordinates": {
+        "lat": 53.442979,
+        "lon": 55.981302
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 275,
+        "distance_to_polyurethane_km": 0,
+        "distance_to_highway_km": 0
+      },
+      "economics": {
+        "has_oez_benefits": true,
+        "has_insurance_benefits": true,
+        "energy_tariff_rub_kwh": 4.2,
+        "average_salary_rub": 79000,
+        "ecological_class_iza": "Повышенный"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 122900,
+        "distance_to_substation_km": 0.0,
+        "connection_cost_rub_kwt": 1500
+      },
+      "social": {
+        "city_environment_index": 251,
+        "kindergarten_occupancy_per_100_kids": 100,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 24900
+      },
+      "cultural_code": {
+        "scoring_style_tags": [
+          "authentic",
+          "techno"
+        ],
+        "architecture_style": "Фасады промышленных зданий сочетают лаконичность индустриального хай-тека с элементами национального колорита: приёмы архитектуры советского модернизма (геометрические объёмы, крупные плоскости остекления) украшены традиционными башкирскими геометрическими орнаментами — ромбами, зигзагами и ступенчатыми фигурами, вписанными во внешнюю отделку и перфорацию композитных панелей.",
+        "materials": "Современные композитные панели, фиброцемент, анодированный алюминий и элементы из натурального дерева, сочетающиеся с мотивами традиционной домовой резьбы.",
+        "color_profile": [
+          "#FFFFFF",
+          "#D32F2F",
+          "#2E7D32",
+          "#FFC107"
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "name": "Республика Башкортостан (Индустриальный парк «Уфимский»)",
+      "coordinates": {
+        "lat": 54.767633,
+        "lon": 56.278168
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 451,
+        "distance_to_polyurethane_km": 343,
+        "distance_to_highway_km": 0
+      },
+      "economics": {
+        "has_oez_benefits": true,
+        "has_insurance_benefits": true,
+        "energy_tariff_rub_kwh": 5.8,
+        "average_salary_rub": 84328,
+        "ecological_class_iza": "Повышенный"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 46800,
+        "distance_to_substation_km": 1.2,
+        "connection_cost_rub_kwt": 550
+      },
+      "social": {
+        "city_environment_index": 251,
+        "kindergarten_occupancy_per_100_kids": 92,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 24900
+      },
+      "cultural_code": {
+        "scoring_style_tags": [
+          "authentic",
+          "eco"
+        ],
+        "architecture_style": "Современная эко-архитектура с элементами башкирского орнамента и мотивами дружбы народов. Фасады АБК сочетают в себе простые геометрические формы, отсылающие к минимализму советского модернизма, с богатой резьбой по дереву, напоминающей традиционное башкирское зодчество. Высокотехнологичные стеклянные вставки и панорамное остекление интегрированы в деревянные каркасы, создавая образ «умного» и экологичного производства, вписанного в живописный ландшафт Южного Урала.",
+        "materials": "Композитные панели цвета светлого дерева, состаренные металлические профили с патиной, фактурный кирпич ручной формовки тёплых терракотовых оттенков, матовое стекло, крупноформатная керамика цвета «скальный дуб». Декоративные элементы включают лазерную резку по металлу, имитирующую башкирский орнамент.",
+        "color_profile": [
+          "#D2B48C",
+          "#8B4513",
+          "#556B2F",
+          "#CD5C5C"
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "name": "Самарская область (ОЭЗ ППТ «Тольятти»)",
+      "coordinates": {
+        "lat": 53.558155,
+        "lon": 49.165011
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 815,
+        "distance_to_polyurethane_km": 389,
+        "distance_to_highway_km": 3
+      },
+      "economics": {
+        "has_oez_benefits": true,
+        "has_insurance_benefits": true,
+        "energy_tariff_rub_kwh": 4.8,
+        "average_salary_rub": 88000,
+        "ecological_class_iza": "Повышенный"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 25000,
+        "distance_to_substation_km": 0,
+        "connection_cost_rub_kwt": 1100
+      },
+      "social": {
+        "city_environment_index": 227,
+        "kindergarten_occupancy_per_100_kids": 85,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 17000
+      },
+      "cultural_code": {
+        "scoring_style_tags": [
+          "techno",
+          "authentic"
+        ],
+        "architecture_style": "Эклектичный микс купеческого классицизма и провинциального модерна, с вкраплениями индустриального конструктивизма советской эпохи. Архитектурный код Самары — это 'жемчужина модерна' на Волге. Городская застройка сочетает краснокирпичную кладку и оштукатуренные особняки XIX—начала XX века с элементами лепнины, коваными решетками и большими арочными окнами. Для промышленной эстетики ОЭЗ 'Тольятти' рекомендован переход к современному хай-теку с ритмичным остеклением, крупными фасадными панелями и четкими геометрическими формами, отсылающими к наследию советского автогиганта.",
+        "materials": "Красный глиняный кирпич верстовой кладки — база исторической застройки. Фасады часто оштукатурены и окрашены; цоколи традиционно кирпичные. В купеческих усадьбах встречается дерево (резные балконы, фахверковые элементы) и кованый металл. В современном прочтении (для АБК и цеха) — сэндвич-панели с имитацией кирпичной кладки, крупноформатные композитные панели под 'мокрый' фасад и элементы анодированного алюминия.",
+        "color_profile": [
+          "#CD5C5C",
+          "#FFF8E7",
+          "#B87333",
+          "#2F4F4F"
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "name": "Самарская область (Индустриальный парк «Преображенка»)",
+      "coordinates": {
+        "lat": 53.091755,
+        "lon": 50.135254
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 50,
+        "distance_to_polyurethane_km": 30,
+        "distance_to_highway_km": 2
+      },
+      "economics": {
+        "has_oez_benefits": true,
+        "has_insurance_benefits": true,
+        "energy_tariff_rub_kwh": 4.85,
+        "average_salary_rub": 88000,
+        "ecological_class_iza": "Повышенный"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 56000,
+        "distance_to_substation_km": 0.5,
+        "connection_cost_rub_kwt": 1500
+      },
+      "social": {
+        "city_environment_index": 210,
+        "kindergarten_occupancy_per_100_kids": 63,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 25000
+      },
+      "cultural_code": {
+        "scoring_style_tags": [
+          "techno",
+          "authentic"
+        ],
+        "architecture_style": "Футуристичный индустриальный хай-тек с элементами исторического модерна и космическими мотивами. Архитектура сочетает строгую геометрию промышленных зданий с плавными линиями волжских террас и силуэтами Жигулевских гор, стилизованными под элементы стартовых космических площадок. Визуальный код включает в себя ритмичное остекление, напоминающее иллюминаторы, и динамичные фасады, отражающие дух авиационного и ракетно-космического кластера региона.",
+        "materials": "Комбинация анодированного алюминия цвета «белый металлик» с грубой текстурой натурального серого гранита и вставками из термообработанной лиственницы. Отделка включает панели с 3D-фактурой, напоминающей граненый металл советского модернизма, и композитные материалы, имитирующие полированный бетон.",
+        "color_profile": [
+          "#FFFFFF",
+          "#005B9F",
+          "#A8A9AD",
+          "#4A5D23"
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "name": "Московская область (Индустриальный парк «Ступино Квадрат»)",
+      "coordinates": {
+        "lat": 55.004646,
+        "lon": 38.063242
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 330,
+        "distance_to_polyurethane_km": 93,
+        "distance_to_highway_km": 5
+      },
+      "economics": {
+        "has_oez_benefits": true,
+        "has_insurance_benefits": true,
+        "energy_tariff_rub_kwh": 8.8,
+        "average_salary_rub": 115056,
+        "ecological_class_iza": "Низкий"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 12000,
+        "distance_to_substation_km": 0.5,
+        "connection_cost_rub_kwt": 1500
+      },
+      "social": {
+        "city_environment_index": 210,
+        "kindergarten_occupancy_per_100_kids": 95,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 25000
+      },
+      "cultural_code": {
+        "scoring_style_tags": [
+          "eco",
+          "authentic"
+        ],
+        "architecture_style": "Современная индустриальная архитектура с включением традиционных русских мотивов (кокошники, наличники) и использованием передовых технологий, характерных для хай-тека.",
+        "materials": "Белая гжельская керамика, чёрный металл жостовских подносов, тёплая текстура павловопосадских шалей и местного дерева в отделке фасадов АБК и благоустройстве.",
+        "color_profile": [
+          "#FFFFFF",
+          "#263F6B",
+          "#9B2C1C",
+          "#D2B48C"
+        ]
+      }
+    }
+  ]
+}
