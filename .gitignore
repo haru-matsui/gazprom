@@ -1,0 +1,53 @@
+*.docx
+example.json
+gpt.py
+run.txt
+67gazan.json
+
+# Среда разработки
+.vscode/
+.idea/
+
+# Виртуальные окружения Python
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Кэш и скомпилированные файлы
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache/
+.tox/
+.coverage
+.cache
+
+# Данные, логи и базы данных
+instance/
+.webassets-cache
+.scrapy
+*.log
+*.sqlite
+*.sqlite3
+db.sqlite
+db.sqlite3
+
+# Системные файлы ОС
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Переменные среды (никогда не загружайте на GitHub)
+.env
+.env.local
+.env.*.local
+*.secret
+*.key
