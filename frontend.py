@@ -7,9 +7,188 @@ from io import BytesIO
 from PIL import Image
 import json
 import streamlit.components.v1 as components
+import os
+import re
+from dotenv import load_dotenv
+from playwright.sync_api import sync_playwright
+from pptx import Presentation
+from pptx.util import Inches
+from pypdf import PdfReader, PdfWriter
+
+# load .env from project root (if present)
+load_dotenv()
+
+
+def _safe_filename(value, fallback="presentation"):
+        cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", str(value)).strip()
+        cleaned = re.sub(r"\s+", " ", cleaned)
+        return cleaned or fallback
+
+
+def build_presentation_document(slide_css, slides_html, reset_script=""):
+        return f"""<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {slide_css}
+    <style>
+        @media print {{
+            html, body {{
+                margin: 0;
+                padding: 0;
+                background: #ffffff;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }}
+            .presentation-wrapper {{
+                display: block !important;
+                height: auto !important;
+                overflow: visible !important;
+                gap: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important; /* Сбрасываем экранный margin-top: 20px, ломавший верстку */
+                background: transparent !important;
+            }}
+            .slide {{
+                display: block !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                page-break-after: avoid !important; /* Убираем всегда, так как слайды рендерятся по одному */
+                break-after: avoid !important;      /* Предотвращает появление пустой/разорванной второй страницы */
+                margin: 0 auto 0 auto !important;
+                box-shadow: none !important;
+                height: 562px !important;     /* Выравниваем высоту точно под размер страницы @page */
+                max-height: 562px !important; /* Запрещаем контейнеру растягиваться */
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+            }}
+            .slide-header {{
+                padding: 18px 40px !important;
+                font-size: 24px !important;
+            }}
+            .slide-body {{
+                padding: 24px 34px !important;
+                gap: 28px !important;
+            }}
+            .title-slide {{
+                background: #d9d9d9 !important;
+                color: #222 !important;
+                justify-content: flex-start !important;
+                align-items: flex-start !important;
+                text-align: left !important;
+                padding: 28px !important;
+                height: 562px !important; /* Задаем жесткую высоту и для титульника */
+                box-sizing: border-box !important;
+            }}
+            .title-slide h1 {{
+                font-size: 34px !important;
+                margin: 0 0 10px 0 !important;
+                color: #222 !important;
+            }}
+            .title-slide h2 {{
+                font-size: 24px !important;
+                margin: 0 0 10px 0 !important; /* Сбрасываем дефолтные маргины браузера, раздувавшие слайд */
+                color: #444 !important;
+            }}
+            .title-subtitle {{
+                margin-top: 18px !important;
+                padding-top: 0 !important;
+                border-top: none !important;
+                width: auto !important;
+                max-width: 100% !important;
+            }}
+            .title-subtitle p {{
+                font-size: 18px !important;
+                color: #666 !important;
+                margin: 0 !important;
+            }}
+            .slide-end {{
+                display: none !important;
+            }}
+            .slide:last-child {{
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }}
+            .slide-end {{
+                color: #ffffff;
+            }}
+        }}
+        @page {{
+            size: 1000px 562px;
+            margin: 0;
+        }}
+    </style>
+</head>
+<body>
+{slides_html}
+{reset_script}
+</body>
+</html>"""
+
+
+def create_pdf_bytes(presentation_html, slide_css):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1400, "height": 900}, device_scale_factor=1)
+        page.set_content(presentation_html, wait_until="networkidle")
+        page.emulate_media(media="print")
+
+        slides = page.locator(".slide:not(.slide-end)")
+        slide_count = slides.count()
+        writer = PdfWriter()
+
+        for index in range(slide_count):
+            slide_html = slides.nth(index).evaluate("element => element.outerHTML")
+            single_slide_html = build_presentation_document(slide_css, f'<div class="presentation-wrapper">{slide_html}</div>')
+            slide_page = browser.new_page(viewport={"width": 1400, "height": 900}, device_scale_factor=1)
+            slide_page.set_content(single_slide_html, wait_until="networkidle")
+            slide_page.emulate_media(media="print")
+            slide_pdf = slide_page.pdf(
+                print_background=True,
+                prefer_css_page_size=True,
+                scale=0.92,
+            )
+            slide_page.close()
+            reader = PdfReader(BytesIO(slide_pdf))
+            for pdf_page in reader.pages:
+                writer.add_page(pdf_page)
+
+        output = BytesIO()
+        writer.write(output)
+        browser.close()
+        return output.getvalue()
+
+
+def create_pptx_bytes(presentation_html):
+        with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page(viewport={"width": 1200, "height": 900}, device_scale_factor=1)
+                page.set_content(presentation_html, wait_until="networkidle")
+                page.emulate_media(media="screen")
+
+                slides = page.locator(".slide:not(.slide-end)")
+                slide_count = slides.count()
+                presentation = Presentation()
+                presentation.slide_width = Inches(13.333)
+                presentation.slide_height = Inches(7.5)
+                blank_layout = presentation.slide_layouts[6]
+
+                for index in range(slide_count):
+                        slide = presentation.slides.add_slide(blank_layout)
+                        image_bytes = slides.nth(index).screenshot(type="png")
+                        slide.shapes.add_picture(BytesIO(image_bytes), 0, 0, width=presentation.slide_width, height=presentation.slide_height)
+
+                output = BytesIO()
+                presentation.save(output)
+                browser.close()
+                return output.getvalue()
 def generate_concept_board_openrouter(region_name, cultural_code):
-    # АПИ КЛЮЧ ПРЕДОСТАВЛЕН ДЛЯ ТЕСТИРОВАНИЯ. КАЖДАЯ ГЕНЕРАЦИЯ СТОИТ 5 ЦЕНТОВ, БАЛАНСА ХВАТАЕТ НА 20 ГЕНЕРАЦИЙ.
-    api_key = "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"
+    # API key must be provided via environment variable `OPENROUTER_API_KEY` or a .env file
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        st.error("API key not found. Set OPENROUTER_API_KEY in your environment or in a .env file.")
+        return None
     model_name = "bytedance-seed/seedream-4.5"
     seed_value = 777
     style = cultural_code.get('architecture_style', '')
@@ -76,7 +255,7 @@ def generate_concept_board_openrouter(region_name, cultural_code):
     return None
 st.set_page_config(page_title="Подбор локации", layout="wide")
 st.title("Выбор оптимального региона для строительства")
-st.markdown("Внесите требуемые параметры для скоринга (10 базовых форм):")
+st.markdown("Внесите требуемые параметры для скоринга:")
 if "concept_boards" not in st.session_state:
     st.session_state["concept_boards"] = {}
 if "four_renders" not in st.session_state:
@@ -104,8 +283,8 @@ with col2:
     st.subheader("3. Архитектура и Благоустройство")
     architecture_priority = st.selectbox("Архитектурный приоритет",
                                          ["Экодизайн", "Техно-стиль", "Аутентичность региону"])
-    landscaping_options = ["Аллея", "Сквер с фонтаном", "Беседки", "Сцена", "Тропа здоровья", "Пруд", "Арт-объект"]
-    landscaping = st.multiselect("Элементы благоустройства", landscaping_options, default=["Аллея", "Пруд"])
+    landscaping_options = ["Сквер с фонтаном", "Беседки", "Сцена", "Пруд", "Арт-объект"]
+    landscaping = st.multiselect("Элементы благоустройства", landscaping_options, default=["Пруд"])
     st.subheader("4. Социальные приоритеты")
     housing_percent = st.slider("Процент сотрудников с жильем (%)", min_value=0, max_value=100, value=10)
     housing_type = st.selectbox("Тип жилья", ["общежитие", "квартира"])
@@ -161,11 +340,22 @@ if st.session_state.get("calculated", False):
             lon = region_data.get("coordinates", {}).get("lon", 45.0)
             marker_color = colors[i] if i < len(colors) else "gray"
             icon_type = "star" if i == 0 else "info-sign"
+            popup_html = f"""
+            <div style="font-family: Arial, sans-serif; font-size:13px; line-height:1.2;">
+              <b>{region_data.get('name', '')}</b> — Место: {i + 1} / Рейтинг: {r.get('score', '')}<br>
+              <ul style="padding-left:18px; margin:6px 0 0 0; font-size:12px;">
+                <li><strong>Льготы:</strong> {('ОЭЗ' if region_data.get('economics', {}).get('has_oez_benefits') else 'Нет')}</li>
+                <li><strong>Сети:</strong> {('Газ' if region_data.get('infrastructure', {}).get('has_gas_in_promzone') else 'Нет')} / {region_data.get('infrastructure', {}).get('available_power_kva', '—')} кВА</li>
+                <li><strong>Логистика:</strong> трасса {region_data.get('logistics', {}).get('distance_to_highway_km', '—')} км, Ж/Д: {('Есть' if region_data.get('logistics', {}).get('has_railway') else 'Нет')}</li>
+                <li><strong>Экономика:</strong> тариф {region_data.get('economics', {}).get('energy_tariff_rub_kwh', '—')} руб/кВт·ч, з/п {region_data.get('economics', {}).get('average_salary_rub', '—')} руб</li>
+                <li><strong>Социалка:</strong> индекс {region_data.get('social', {}).get('city_environment_index', '—')}, колледжи: {('Есть' if region_data.get('social', {}).get('has_profile_colleges') else 'Нет')}, сады {region_data.get('social', {}).get('kindergarten_occupancy_per_100_kids', '—')}/100</li>
+              </ul>
+            </div>
+            """
             folium.Marker(
                 location=[lat, lon],
-                popup=folium.Popup(f"<b>{region_data['name']}</b><br>Место: {i + 1}<br>Рейтинг: {r['score']}",
-                                   max_width=300),
-                tooltip=f"#{i + 1}: {region_data['name']} (Рейтинг: {r['score']})",
+                popup=folium.Popup(popup_html, max_width=320),
+                tooltip=f"#{i + 1}: {region_data.get('name', '')} (Рейтинг: {r.get('score', '')})",
                 icon=folium.Icon(color=marker_color, icon=icon_type)
             ).add_to(m)
             with tabs[i]:
@@ -219,7 +409,7 @@ if st.session_state.get("calculated", False):
                     st.write(f"- **Годовой OPEX:** {est['opex']:,} руб/год")
                     st.markdown(f"**ИТОГОВАЯ СМЕТА ПРОЕКТА:** :green[**{est['total_cost']:,} руб**]")
                 st.markdown("---")
-                st.markdown("###Интерактивная 3D-визуализация площадки (Three.js)")
+                st.markdown("### Интерактивная 3D-визуализация площадки (Three.js)")
                 st.write("Интерактивная трехмерная схема генерального плана на основе ваших параметров.")
                 current_cultural_code = region_data.get('cultural_code', {})
                 colors_from_code = current_cultural_code.get('color_profile', ["#555555", "#999999", "#cccccc"])
@@ -234,16 +424,16 @@ if st.session_state.get("calculated", False):
                     "color_palette": colors_from_code if colors_from_code else ["#555555", "#999999", "#cccccc"]
                 }
                 try:
-                    with open("app/three_scene.html", "r", encoding="utf-8") as f:
+                    with open("three_scene.html", "r", encoding="utf-8") as f:
                         html_template = f.read()
                     runtime_html = html_template.replace("__DATA_PLACEHOLDER__", json.dumps(three_js_data))
                     components.html(runtime_html, height=550, scrolling=False)
                 except FileNotFoundError:
                     st.error("Не удалось найти файл шаблона сцены `three_scene.html` в папке проекта.")
                 st.markdown("---")
-                st.markdown("####Архитектурный концепт-борд (AI Генерация)")
+                st.markdown("#### Архитектурный концепт-борд (AI Генерация)")
                 st.write(
-                    "Создание визуализации на основе cultural_code региона (цвета, материалы, исторический стиль).")
+                    "Создание визуализации на основе культурного кода региона (цвета, материалы, исторический стиль).")
                 cultural_code = region_data.get("cultural_code")
                 if cultural_code:
                     colors_html = "".join([
@@ -399,6 +589,42 @@ if st.session_state.get("calculated", False):
 .presentation-wrapper::-webkit-scrollbar-thumb:hover {
     background: #777;
 }
+.slide-end {
+    background: linear-gradient(135deg, #141414 0%, #232323 100%);
+    color: white;
+}
+.slide-end .slide-header {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+}
+.slide-end .slide-body {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+.end-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+    padding: 10px 18px;
+    margin-bottom: 18px;
+    font-size: 16px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.end-title {
+    font-size: 42px;
+    font-weight: 700;
+    margin: 0 0 14px 0;
+    color: #ffffff;
+}
+.end-text {
+    font-size: 22px;
+    color: #d8d8d8;
+    line-height: 1.5;
+    margin: 0;
+}
 </style>
 """
         st.markdown(slide_css, unsafe_allow_html=True)
@@ -412,7 +638,7 @@ if st.session_state.get("calculated", False):
 <div class="slide title-slide">
 <h1>Проект строительства<br>производственного комплекса</h1>
 <h2>{top1['name']}</h2>
-<div style="margin-top: 50px; padding-top: 40px; border-top: 1px solid rgba(255,255,255,0.3); width: 60%;">
+<div class="title-subtitle" style="margin-top: 50px; padding-top: 40px; border-top: 1px solid rgba(255,255,255,0.3); width: 60%;">
 <p style="font-size: 24px; color: #a8c1e8; margin: 0;">Стратегия локализации на основе оценки региона</p>
 </div>
 </div>
@@ -505,6 +731,16 @@ if st.session_state.get("calculated", False):
 </div>
 </div>
 </div>
+<div class="slide slide-end">
+<div class="slide-header">Конец презентации</div>
+<div class="slide-body">
+<div>
+<div class="end-badge">Финальный слайд</div>
+<div class="end-title">Спасибо за внимание</div>
+<p class="end-text">Презентация завершена. Ниже можно скачать PDF и PPTX</p>
+</div>
+</div>
+</div>
 </div>
 """
         reset_script = '''
@@ -518,3 +754,37 @@ if st.session_state.get("calculated", False):
 </script>
 '''
         st.markdown(slides_html + reset_script, unsafe_allow_html=True)
+        presentation_html = build_presentation_document(slide_css, slides_html, reset_script)
+        presentation_name = _safe_filename(top1['name'])
+        export_key = f"{presentation_name}:{top1_est['total_cost']}"
+        if st.session_state.get("presentation_export_key") != export_key:
+            with st.spinner("Подготавливаем PDF и PPTX..."):
+                try:
+                    st.session_state["presentation_pdf_bytes"] = create_pdf_bytes(presentation_html, slide_css)
+                    st.session_state["presentation_pptx_bytes"] = create_pptx_bytes(presentation_html)
+                    st.session_state["presentation_export_key"] = export_key
+                except Exception as export_error:
+                    st.session_state["presentation_pdf_bytes"] = b""
+                    st.session_state["presentation_pptx_bytes"] = b""
+                    st.error(f"Не удалось подготовить файлы презентации: {export_error}")
+
+        st.markdown("#### Скачать презентацию")
+        download_left, download_right = st.columns(2)
+        with download_left:
+            st.download_button(
+                label="Скачать PPTX",
+                data=st.session_state.get("presentation_pptx_bytes", b""),
+                file_name=f"{presentation_name}.pptx",
+                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                use_container_width=True,
+                disabled=not st.session_state.get("presentation_pptx_bytes")
+            )
+        with download_right:
+            st.download_button(
+                label="Скачать PDF",
+                data=st.session_state.get("presentation_pdf_bytes", b""),
+                file_name=f"{presentation_name}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                disabled=not st.session_state.get("presentation_pdf_bytes")
+            )

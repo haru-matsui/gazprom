@@ -43,9 +43,9 @@ def calculate_estimate(region, user_input, required_power):
     housing_cost = housing_area * housing_cost_per_m2 * regional_coef
     kindergarten_cost = kindergarten_area * 50000 * regional_coef
     landscaping_prices = {
-        "Аллея": 2_000_000, "Сквер с фонтаном": 5_000_000,
+        "Сквер с фонтаном": 5_000_000,
         "Беседки": 1_000_000, "Сцена": 3_000_000,
-        "Тропа здоровья": 2_500_000, "Пруд": 6_000_000,
+        "Пруд": 6_000_000,
         "Арт-объект": 1_500_000
     }
     landscaping_cost = sum([landscaping_prices.get(i, 0) for i in user_input["landscaping"]])
