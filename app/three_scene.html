@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body, html { margin: 0; padding: 0; overflow: hidden; background-color: #22252a; }
+        #three-container { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+
+    <div id="three-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        const data = __DATA_PLACEHOLDER__;
+
+        const container = document.getElementById('three-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xddeeff); // Светлое дневное небо
+        scene.fog = new THREE.FogExp2(0xddeeff, 0.0015);
+
+        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 2000);
+        camera.position.set(300, 250, 400);
+
+        // ВАЖНО: preserveDrawingBuffer: true позволяет делать снимки экрана WebGL
+        const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05;
+        controls.minDistance = 50;
+        controls.maxDistance = 800;
+
+        let introAnimationActive = true;
+        const targetCameraPos = new THREE.Vector3(150, 130, 220);
+
+        // --- ГЕНЕРАЦИЯ ВСТРОЕННЫХ ТЕКСТУР БЕЗ CORS ОШИБОК ---
+
+        // 1. Создаем текстуру промышленного асфальта для пола
+        function createAsphaltTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#464950';
+            ctx.fillRect(0, 0, 512, 512);
+            // Добавляем текстурную крошку
+            for (let i = 0; i < 15000; i++) {
+                const x = Math.random() * 512;
+                const y = Math.random() * 512;
+                const size = Math.random() * 1.5;
+                const opacity = Math.random() * 0.15;
+                ctx.fillStyle = Math.random() > 0.5 ? `rgba(255,255,255,${opacity})` : `rgba(0,0,0,${opacity})`;
+                ctx.fillRect(x, y, size, size);
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
+        // 2. Создаем рельефную текстуру сэндвич-панелей для стен
+        function createWallTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff'; // Белая основа под окраску
+            ctx.fillRect(0, 0, 128, 128);
+
+            // Прорисовываем стыки панелей
+            ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+            ctx.lineWidth = 3;
+            for(let y=0; y<=128; y+=32) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(128, y); ctx.stroke();
+                // Блик для объема
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                ctx.beginPath(); ctx.moveTo(0, y+2); ctx.lineTo(128, y+2); ctx.stroke();
+                ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
+        const groundMap = createAsphaltTexture();
+        groundMap.repeat.set(40, 40);
+
+        const wallMapBase = createWallTexture();
+
+        // --- ОСВЕЩЕНИЕ ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xfffaed, 1.1);
+        sunLight.position.set(200, 250, 150);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.bias = -0.0002;
+
+        const d = 350;
+        sunLight.shadow.camera.left = -d; sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d; sunLight.shadow.camera.bottom = -d;
+        sunLight.shadow.camera.near = 10; sunLight.shadow.camera.far = 800;
+        scene.add(sunLight);
+
+        // --- МАСШТАБЫ И СЕТКА ---
+        const scaleFactor = 0.35;
+        const shopW = Math.sqrt(data.shop_area) * scaleFactor;
+        const shopL = shopW * 1.6;
+        const areaSize = Math.max(500, shopL * 4);
+
+        const groundGeo = new THREE.PlaneGeometry(areaSize, areaSize);
+        const groundMat = new THREE.MeshStandardMaterial({ map: groundMap, roughness: 0.85, metalness: 0.1 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        const gridHelper = new THREE.GridHelper(areaSize, Math.floor(areaSize/25), 0x222222, 0x3a3e46);
+        gridHelper.position.y = 0.02;
+        scene.add(gridHelper);
+
+        // Расчет позиций
+        const centerX = 0; const centerZ = 0; const padding = 30;
+        const shopX = centerX; const shopZ = centerZ;
+
+        const whW = Math.sqrt(data.warehouse_area) * scaleFactor;
+        const whL = whW * 1.3;
+        const warehouseX = shopX + (shopW / 2) + (whW / 2) + padding;
+        const warehouseZ = shopZ;
+
+        const abkW = Math.sqrt(data.abk_area) * scaleFactor;
+        const abkL = abkW * 1.1;
+        const abkX = shopX;
+        const abkZ = shopZ + (shopL / 2) + (abkL / 2) + padding;
+
+        // Плашки текстов
+        function createLabel(text, x, y, z) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgba(24, 26, 32, 0.95)';
+            ctx.fillRect(0, 0, 512, 64);
+            ctx.strokeStyle = '#0088ff'; ctx.lineWidth = 3; ctx.strokeRect(1, 1, 510, 62);
+            ctx.font = 'Bold 22px Arial'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
+            ctx.fillText(text, 256, 40);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.position.set(x, y, z);
+            sprite.scale.set(36, 4.5, 1);
+            scene.add(sprite);
+        }
+
+        // --- СТРОИТЕЛЬСТВО ОБЪЕКТОВ ЗАВОДА ---
+        const particleSystems = [];
+
+        function createFactoryComplex(width, length, height, colorHex, x, z, name, isMain = false) {
+            const group = new THREE.Group();
+
+            // Цоколь
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x222428, roughness: 0.9 });
+            const base = new THREE.Mesh(new THREE.BoxGeometry(width + 2, 1.5, length + 2), baseMat);
+            base.position.y = 0.75; base.castShadow = true; base.receiveShadow = true;
+            group.add(base);
+
+            // Клонируем текстуру стен под габариты конкретного здания
+            const currentWallTex = wallMapBase.clone();
+            currentWallTex.needsUpdate = true;
+            currentWallTex.repeat.set(width / 10, height / 6);
+
+            // Стены (текстура панелей + подмешивание цвета региона)
+            const bodyMat = new THREE.MeshStandardMaterial({
+                map: currentWallTex,
+                color: parseInt(colorHex.replace('#', '0x')),
+                roughness: 0.45,
+                metalness: 0.3
+            });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(width, height - 1.5, length), bodyMat);
+            body.position.y = (height - 1.5) / 2 + 1.5;
+            body.castShadow = true; body.receiveShadow = true;
+            group.add(body);
+
+            // Кровля
+            const roofMat = new THREE.MeshStandardMaterial({ color: 0x2c2e33, roughness: 0.7 });
+            const roof = new THREE.Mesh(new THREE.BoxGeometry(width + 1, 0.6, length + 1), roofMat);
+            roof.position.y = height + 0.3; roof.castShadow = true;
+            group.add(roof);
+
+            // Окна остекления
+            const winMat = new THREE.MeshStandardMaterial({ color: 0x5ec4ff, emissive: 0x051c2c, roughness: 0.05, metalness: 0.95 });
+            const winGeo = new THREE.BoxGeometry(width + 0.3, 1.5, 5);
+            for (let y = 4; y < height - 2; y += 4) {
+                for(let zs = -length/2.5; zs <= length/2.5; zs += 18) {
+                    const winRow = new THREE.Mesh(winGeo, winMat);
+                    winRow.position.set(0, y, zs);
+                    group.add(winRow);
+                }
+            }
+
+            if (isMain) {
+                // Логистические доки
+                const gateMat = new THREE.MeshStandardMaterial({ color: 0x1a1c1e, metalness: 0.5 });
+                const gateGeo = new THREE.BoxGeometry(0.2, 5, 5);
+                for(let dg = -length/4; dg <= length/4; dg += 15) {
+                    const gate = new THREE.Mesh(gateGeo, gateMat);
+                    gate.position.set(-width/2, 2.5, dg);
+                    group.add(gate);
+                }
+
+                // Индустриальная труба
+                const pipeH = 22;
+                const pipeGeo = new THREE.CylinderGeometry(1.4, 1.9, pipeH, 16);
+                const pipeMat = new THREE.MeshStandardMaterial({ color: 0x546e7a, metalness: 0.6, roughness: 0.4 });
+                const pipe = new THREE.Mesh(pipeGeo, pipeMat);
+
+                const localPipeX = width / 2 - 4; const localPipeZ = -length / 2 + 4;
+                pipe.position.set(localPipeX, height + pipeH/2, localPipeZ);
+                pipe.castShadow = true; group.add(pipe);
+
+                // Координаты дыма
+                createSmokeSource(x + localPipeX, height + pipeH, z + localPipeZ);
+            }
+
+            group.position.set(x, 0, z);
+            scene.add(group);
+
+            if(name) {
+                createLabel(name, x, height + 10, z);
+            }
+            return group;
+        }
+
+        function createSmokeSource(x, y, z) {
+            const particleCount = 35;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            for(let i=0; i<particleCount; i++) {
+                positions[i*3] = x; positions[i*3+1] = y + (Math.random() * 12); positions[i*3+2] = z;
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const points = new THREE.Points(geometry, new THREE.PointsMaterial({color: 0xeeeeee, size: 4.5, transparent: true, opacity: 0.35}));
+            scene.add(points);
+            particleSystems.push({ mesh: points, startX: x, startY: y, startZ: z });
+        }
+
+        // Рендер объектов
+        const palette = data.color_palette;
+        const color1 = palette[0] ? palette[0] : "#4a90e2";
+        const color2 = palette[1] ? palette[1] : "#7f8c8d";
+        const color3 = palette[2] ? palette[2] : "#34495e";
+
+        createFactoryComplex(shopW, shopL, 18, color1, shopX, shopZ, "Производственный комплекс", true);
+        createFactoryComplex(whW, whL, 14, color2, warehouseX, warehouseZ, "Склад готовой продукции", false);
+        createFactoryComplex(abkW, abkL, 11, color3, abkX, abkZ, "Инженерный корпус (АБК)", false);
+
+        // Машины
+        function createHeavyTruck(x, z, rot) {
+            const truck = new THREE.Group();
+            const cab = new THREE.Mesh(new THREE.BoxGeometry(3.5, 4, 3.5), new THREE.MeshStandardMaterial({color: 0xbf360c, roughness: 0.3}));
+            cab.position.set(0, 2, 3.5); cab.castShadow = true; truck.add(cab);
+
+            const trailer = new THREE.Mesh(new THREE.BoxGeometry(3.5, 4.8, 12), new THREE.MeshStandardMaterial({color: 0xe0e0e0, metalness: 0.2, roughness: 0.6}));
+            trailer.position.set(0, 2.4, -4.5); trailer.castShadow = true; truck.add(trailer);
+
+            const whGeo = new THREE.CylinderGeometry(0.8, 0.8, 0.6, 12); whGeo.rotateZ(Math.PI / 2);
+            const whMat = new THREE.MeshStandardMaterial({color: 0x111111});
+            const wheelOffsets = [[-1.8, 0.8, 3.5], [1.8, 0.8, 3.5], [-1.8, 0.8, -2], [1.8, 0.8, -2], [-1.8, 0.8, -7], [1.8, 0.8, -7]];
+            wheelOffsets.forEach(os => {
+                const w = new THREE.Mesh(whGeo, whMat); w.position.set(os[0], os[1], os[2]); truck.add(w);
+            });
+            truck.position.set(x, 0, z); truck.rotation.y = rot; scene.add(truck);
+        }
+
+        const truckDistanceX = shopX - (shopW / 2) - 18;
+        createHeavyTruck(truckDistanceX, shopZ - 15, Math.PI / 2);
+        createHeavyTruck(truckDistanceX, shopZ + 15, Math.PI / 2);
+
+        // --- ЦИКЛ АНИМАЦИИ ---
+        function animate() {
+            requestAnimationFrame(animate);
+            if (introAnimationActive) {
+                camera.position.lerp(targetCameraPos, 0.025);
+                if (camera.position.distanceTo(targetCameraPos) < 2.0) introAnimationActive = false;
+            }
+
+            particleSystems.forEach(sys => {
+                const posAttr = sys.mesh.geometry.attributes.position;
+                for (let i = 0; i < posAttr.count; i++) {
+                    let px = posAttr.getX(i); let py = posAttr.getY(i); let pz = posAttr.getZ(i);
+                    py += 0.14; px += Math.sin(py * 0.15) * 0.04;
+                    if (py > sys.startY + 18) {
+                        py = sys.startY; px = sys.startX + (Math.random() - 0.5) * 1.2; pz = sys.startZ + (Math.random() - 0.5) * 1.2;
+                    }
+                    posAttr.setX(i, px); posAttr.setY(i, py); posAttr.setZ(i, pz);
+                }
+                posAttr.needsUpdate = true;
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        container.addEventListener('mousedown', () => introAnimationActive = false);
+        container.addEventListener('wheel', () => introAnimationActive = false);
+        container.addEventListener('touchstart', () => introAnimationActive = false);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
