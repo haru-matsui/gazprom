@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 import json
 from pathlib import Path
-from app.schemas import UserInput
-from app.services import run_scoring_algorithm
+from schemas import UserInput
+from services import run_scoring_algorithm
 
 app = FastAPI(title="GPN Scoring API")
 
-DATA_PATH = Path(__file__).parent.parent / "baza.json"
+DATA_PATH = Path(__file__).parent / "baza.json"
 with open(DATA_PATH, "r", encoding="utf-8-sig") as f:
     database = json.load(f)
 

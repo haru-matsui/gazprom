@@ -78,6 +78,8 @@
         shop_area: 25000,
         warehouse_area: 15000,
         abk_area: 5000,
+        landscaping: [],
+        sports: [],
         color_palette: ["#1a5b7f", "#4a5568", "#2d3748"]
       };
     }
@@ -89,7 +91,7 @@
     // Physical renderer settings for more "real" look
     const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     // sRGB + filmic tonemapping (r128 style)
@@ -168,7 +170,7 @@
     const grassMap = makeCanvasTex(512,512, (ctx,w,h)=>{
   ctx.fillStyle = '#3f6a40'; ctx.fillRect(0,0,w,h);
   // намного меньше точек
-  for(let i=0;i<18000;i++){
+  for(let i=0;i<12000;i++){
     const g = 80 + Math.floor(rand()*70);
     const a = 0.10;
     ctx.fillStyle = `rgba(${25},${g},${25},${a})`;
@@ -180,13 +182,13 @@ grassMap.anisotropy = 2;
     const asphaltMap = makeCanvasTex(512,1024, (ctx,w,h)=>{
       ctx.fillStyle = '#26282c'; ctx.fillRect(0,0,w,h);
       // speckles + cracks
-      for(let i=0;i<40000;i++){
+      for(let i=0;i<18000;i++){
         const v = 180 + Math.floor(rand()*60);
         ctx.fillStyle = `rgba(${v},${v},${v},${0.025+rand()*0.03})`;
         ctx.fillRect(rand()*w, rand()*h, 1, 1);
       }
-      for(let i=0;i<1400;i++){
-        ctx.strokeStyle = `rgba(10,10,10,${0.06+rand()*0.08})`;
+      for(let i=0;i<700;i++){
+        ctx.strokeStyle = `rgba(10,10,10,${0.04+rand()*0.05})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
         const x=rand()*w, y=rand()*h;
@@ -202,7 +204,7 @@ grassMap.anisotropy = 2;
     }, 1, 6, true);
     const concreteMap = makeCanvasTex(512,512,(ctx,w,h)=>{
       ctx.fillStyle='#b8bfc6'; ctx.fillRect(0,0,w,h);
-      for(let i=0;i<25000;i++){
+      for(let i=0;i<12000;i++){
         const v = 170 + Math.floor(rand()*50);
         ctx.fillStyle=`rgba(${v},${v},${v},${0.06+rand()*0.08})`;
         ctx.fillRect(rand()*w, rand()*h, 2, 2);
@@ -227,7 +229,7 @@ grassMap.anisotropy = 2;
     const sun = new THREE.DirectionalLight(0xfff2d6, 3.2);
     sun.position.set(520, 620, 340);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(4096,4096);
+    sun.shadow.mapSize.set(2048,2048);
     sun.shadow.bias = -0.00025;
     const d = 880;
     sun.shadow.camera.left = -d;
@@ -263,49 +265,21 @@ grassMap.anisotropy = 2;
     // Road network (main road + city grid + factory access)
     // ---------------------------
     function buildRoadNetwork() {
-      // Main arterial road (north-south)
-      const mainRoad = addPlane(36, 3200, asphaltMat, -120, 0, 0.03);
-      scene.add(mainRoad);
-      // Side road to city (east-west)
-      const cityRoad = addPlane(1400, 34, asphaltMat, -620, 230, 0.032);
-      scene.add(cityRoad);
-      // Factory access road
-      const factoryAccess = addPlane(520, 28, asphaltMat, 140, -80, 0.032);
-      scene.add(factoryAccess);
-      // Roundabout-ish apron near gate (simple ellipse-ish)
+      const roadShoulderMat = new THREE.MeshStandardMaterial({ color: 0x1b1f24, roughness: 0.98 });
+      function addRoadSurface(w, l, x, z, y=0.03, rot=0) {
+        scene.add(addPlane(w + 8, l + 8, roadShoulderMat, x, z, y - 0.002, rot));
+        scene.add(addPlane(w, l, asphaltMat, x, z, y, rot));
+      }
+      // Single street between the residential rows, extended to the factory site
+      addRoadSurface(38, 1320, -395, 220, 0.14, Math.PI / 2);
       const apron = new THREE.Mesh(
-        new THREE.CircleGeometry(70, 48),
+        new THREE.CircleGeometry(46, 36),
         new THREE.MeshStandardMaterial({ color: 0x2a2c31, roughness: 0.95 })
       );
       apron.rotation.x = -Math.PI/2;
-      apron.position.set(-20, 0.031, -80);
+      apron.position.set(-55, 0.031, -40);
       apron.receiveShadow = true;
       scene.add(apron);
-      // Sidewalk strips along city road
-      const sw1 = addPlane(1400, 6, sidewalkMat, -620, 230-20, 0.035);
-      const sw2 = addPlane(1400, 6, sidewalkMat, -620, 230+20, 0.035);
-      scene.add(sw1, sw2);
-      // City streets grid
-      for(let i=0;i<6;i++){
-        scene.add(addPlane(650, 18, asphaltMat, -860, 110 + i*70, 0.032)); // east-west streets
-      }
-      for(let i=0;i<6;i++){
-        scene.add(addPlane(18, 520, asphaltMat, -1040 + i*110, 285, 0.032)); // north-south streets
-      }
-      // Curbs around a couple of blocks (cheap approximation)
-      function curbRect(cx,cz,w,l){
-        const h = 0.35;
-        const t = 0.8;
-        const geo1 = new THREE.BoxGeometry(w, h, t);
-        const geo2 = new THREE.BoxGeometry(t, h, l);
-        const a = new THREE.Mesh(geo1, curbMat); a.position.set(cx, h/2, cz-l/2);
-        const b = new THREE.Mesh(geo1, curbMat); b.position.set(cx, h/2, cz+l/2);
-        const c = new THREE.Mesh(geo2, curbMat); c.position.set(cx-w/2, h/2, cz);
-        const d = new THREE.Mesh(geo2, curbMat); d.position.set(cx+w/2, h/2, cz);
-        [a,b,c,d].forEach(m=>{m.castShadow=true; m.receiveShadow=true; scene.add(m);});
-      }
-      curbRect(-860, 250, 620, 420);
-      curbRect(-640, 250, 620, 420);
     }
     buildRoadNetwork();
     // ---------------------------
@@ -328,7 +302,6 @@ grassMap.anisotropy = 2;
         addMarkingRect(0.6, dash, x, z + dash/2, 0.041, 0, 0xffffff, 0.55);
       }
     }
-    addDashedCenterLine(-120, -1500, 1500, 12, 14); // main road
     // ---------------------------
     // Factory zone: fence, gate, security, parking, logistics yard
     // ---------------------------
@@ -388,13 +361,19 @@ grassMap.anisotropy = 2;
     const yard = addPlane(560, 640, new THREE.MeshStandardMaterial({ color: 0x2a2c31, roughness: 0.95 }), 240, 0, 0.031);
     factoryZone.add(yard);
     // parking with lines
-    const parking = addPlane(220, 180, new THREE.MeshStandardMaterial({ color: 0x2b2e34, roughness: 0.95 }), 60, 170, 0.032);
+    const parking = addPlane(190, 150, new THREE.MeshStandardMaterial({ color: 0x2b2e34, roughness: 0.95 }), 60, 170, 0.032);
     factoryZone.add(parking);
     // parking markings
     for(let i=0;i<10;i++){
       addMarkingRect(0.25, 14, -20 + i*18, 170, 0.042, 0, 0xffffff, 0.55);
     }
-    addMarkingRect(220, 0.3, 60, 80, 0.042, 0, 0xffffff, 0.25);
+    for(let i=0;i<10;i++){
+      addMarkingRect(0.25, 14, -20 + i*18, 146, 0.042, 0, 0xffffff, 0.55);
+    }
+    for(let i=0;i<10;i++){
+      addMarkingRect(0.25, 14, -20 + i*18, 122, 0.042, 0, 0xffffff, 0.55);
+    }
+    addMarkingRect(190, 0.3, 60, 80, 0.042, 0, 0xffffff, 0.25);
     // ---------------------------
     // Buildings: more "industrial real"
     // ---------------------------
@@ -480,21 +459,6 @@ grassMap.anisotropy = 2;
           g.add(ramp);
         }
       }
-      // rooftop HVAC + fans (animated)
-      const hvacMat = new THREE.MeshStandardMaterial({ color: 0xd7dbe0, roughness: 0.55, metalness: 0.35 });
-      for(let i=0;i<10;i++){
-        if(rand() < 0.4) continue;
-        const hv = new THREE.Mesh(new THREE.BoxGeometry(6, 3, 10), hvacMat);
-        hv.position.set((rand()-0.5)*(w-20), h+3.4, (rand()-0.5)*(l-24));
-        hv.castShadow = true;
-        g.add(hv);
-        const fan = new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.2,0.2,20), darkMetal);
-        fan.position.set(hv.position.x, h+5.0, hv.position.z);
-        const blade = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.15, 0.6), metal);
-        fan.add(blade);
-        g.add(fan);
-        updatables.push(()=> fan.rotation.y += 0.12);
-      }
       // stack + smoke
       let smoke = null;
       if (withStack) {
@@ -504,7 +468,7 @@ grassMap.anisotropy = 2;
         stack.castShadow = true;
         g.add(stack);
         // nicer smoke (sprite-like points with turbulence)
-        const count = 120;
+        const count = 72;
         const geo = new THREE.BufferGeometry();
         const pos = new Float32Array(count * 3);
         const life = new Float32Array(count);
@@ -550,6 +514,7 @@ grassMap.anisotropy = 2;
     // ---------------------------
     const cityGroup = new THREE.Group();
     scene.add(cityGroup);
+    let apartmentLabelIndex = 1;
     function createApartmentBlock(x,z, floors=9, w=26, l=18) {
       const g = new THREE.Group();
       const h = floors * 3.1;
@@ -600,6 +565,120 @@ grassMap.anisotropy = 2;
       createLabel(kind==='kinder' ? "Детский сад" : "Школа", x, 22, z);
       return g;
     }
+    function addLowPolyTree(x, z, scale = 1) {
+      const group = new THREE.Group();
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28 * scale, 0.36 * scale, 3.2 * scale, 7),
+        new THREE.MeshStandardMaterial({ color: 0x6b4b33, roughness: 0.95 })
+      );
+      trunk.position.y = 1.6 * scale;
+      const crown = new THREE.Mesh(
+        new THREE.SphereGeometry(1.8 * scale, 10, 8),
+        new THREE.MeshStandardMaterial({ color: 0x2b6b3c, roughness: 0.95 })
+      );
+      crown.position.y = 4.0 * scale;
+      group.add(trunk, crown);
+      group.position.set(x, 0, z);
+      cityGroup.add(group);
+      return group;
+    }
+    function addAmenity(kind, x, z) {
+      const group = new THREE.Group();
+      if (kind === 'Сквер с фонтаном') {
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(8.5, 9.2, 0.6, 32), new THREE.MeshStandardMaterial({ color: 0xd3d7dd, roughness: 0.92 }));
+        base.position.y = 0.3;
+        const pool = new THREE.Mesh(new THREE.CylinderGeometry(4.9, 5.4, 0.9, 28), new THREE.MeshStandardMaterial({ color: 0x7eaed4, roughness: 0.48, transparent: true, opacity: 0.92 }));
+        pool.position.y = 0.7;
+        const water = new THREE.Mesh(new THREE.CylinderGeometry(4.1, 4.1, 0.2, 28), new THREE.MeshStandardMaterial({ color: 0x9ed2ff, roughness: 0.15, transparent: true, opacity: 0.75 }));
+        water.position.y = 1.0;
+        const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 2.5, 10), new THREE.MeshStandardMaterial({ color: 0xcfe8ff, roughness: 0.2, transparent: true, opacity: 0.8 }));
+        jet.position.y = 2.0;
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(3.3, 0.22, 10, 36), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }));
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = 1.1;
+        group.add(base, pool, water, jet, ring);
+      } else if (kind === 'Беседки') {
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(4.3, 2.0, 8), new THREE.MeshStandardMaterial({ color: 0x8a5b38, roughness: 0.96 }));
+        roof.position.y = 4.1;
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.2, 2.2, 8), new THREE.MeshStandardMaterial({ color: 0xf0e6d7, roughness: 0.88, transparent: true, opacity: 0.82 }));
+        body.position.y = 1.95;
+        const table = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.18, 8), new THREE.MeshStandardMaterial({ color: 0x7b5a3b, roughness: 0.92 }));
+        table.position.y = 1.1;
+        group.add(roof, body, table);
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI * 2 * i) / 6;
+          const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.0, 6), new THREE.MeshStandardMaterial({ color: 0x7f5b3b, roughness: 0.9 }));
+          post.position.set(Math.cos(angle) * 3.0, 2.0, Math.sin(angle) * 3.0);
+          group.add(post);
+        }
+      } else if (kind === 'Сцена') {
+        const stage = new THREE.Mesh(new THREE.BoxGeometry(13, 0.9, 8.5), new THREE.MeshStandardMaterial({ color: 0x3a4048, roughness: 0.9 }));
+        stage.position.y = 0.45;
+        const backWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 4.2, 8.0), new THREE.MeshStandardMaterial({ color: 0x222830, roughness: 0.95 }));
+        backWall.position.set(-5.8, 2.5, 0);
+        const canopy = new THREE.Mesh(new THREE.BoxGeometry(14.2, 0.55, 9.6), new THREE.MeshStandardMaterial({ color: 0x69717b, roughness: 0.94 }));
+        canopy.position.y = 4.35;
+        const stairs = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.55, 2.2), new THREE.MeshStandardMaterial({ color: 0x545b64, roughness: 0.92 }));
+        stairs.position.set(5.5, 0.25, -2.6);
+        group.add(stage, backWall, canopy, stairs);
+      } else if (kind === 'Пруд') {
+        const pond = new THREE.Mesh(new THREE.CircleGeometry(7, 28), new THREE.MeshStandardMaterial({ color: 0x76a9d8, roughness: 0.35, transparent: true, opacity: 0.88 }));
+        pond.rotation.x = -Math.PI/2;
+        pond.position.y = 0.02;
+        group.add(pond);
+      } else if (kind === 'Арт-объект') {
+        const art = new THREE.Mesh(new THREE.TorusKnotGeometry(2.2, 0.55, 64, 8), new THREE.MeshStandardMaterial({ color: 0xc35b3c, roughness: 0.55, metalness: 0.2 }));
+        art.position.y = 3.2;
+        group.add(art);
+      } else if (kind === 'Уличные тренажёры') {
+        const frameMat = new THREE.MeshStandardMaterial({ color: 0x4d5e6d, roughness: 0.84 });
+        const handleMat = new THREE.MeshStandardMaterial({ color: 0xc7d0d8, roughness: 0.7 });
+        const base = new THREE.Mesh(new THREE.BoxGeometry(10, 0.4, 4.5), new THREE.MeshStandardMaterial({ color: 0xd8d1c5, roughness: 0.96 }));
+        base.position.y = 0.2;
+        const press1 = new THREE.Mesh(new THREE.BoxGeometry(0.45, 3.2, 0.45), frameMat);
+        press1.position.set(-2.6, 1.6, 0.9);
+        const press2 = press1.clone();
+        press2.position.set(2.6, 1.6, 0.9);
+        const beam = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.22, 0.22), handleMat);
+        beam.position.set(0, 3.0, 0.9);
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.3, 1.1), new THREE.MeshStandardMaterial({ color: 0x2e3944, roughness: 0.9 }));
+        seat.position.set(0, 1.0, -0.7);
+        group.add(base, press1, press2, beam, seat);
+      } else if (kind === 'Стадион') {
+        const outer = new THREE.Mesh(new THREE.BoxGeometry(30, 0.7, 20), new THREE.MeshStandardMaterial({ color: 0xb55d3d, roughness: 0.96 }));
+        outer.position.y = 0.18;
+        const field = new THREE.Mesh(new THREE.BoxGeometry(23, 0.55, 13.5), new THREE.MeshStandardMaterial({ color: 0x4a8b52, roughness: 0.95 }));
+        field.position.y = 0.4;
+        const lane1 = new THREE.Mesh(new THREE.BoxGeometry(28.5, 0.08, 18.5), new THREE.MeshStandardMaterial({ color: 0xf2efe8, roughness: 0.85 }));
+        lane1.position.y = 0.55;
+        const lane2 = new THREE.Mesh(new THREE.BoxGeometry(25.8, 0.08, 15.8), new THREE.MeshStandardMaterial({ color: 0xf2efe8, roughness: 0.85 }));
+        lane2.position.y = 0.56;
+        group.add(outer, field, lane1, lane2);
+      } else if (kind === 'Бассейн') {
+        const pool = new THREE.Mesh(new THREE.BoxGeometry(18, 1.2, 10), new THREE.MeshStandardMaterial({ color: 0x6daedb, roughness: 0.5, transparent: true, opacity: 0.9 }));
+        pool.position.y = 0.6;
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(20, 1, 12), new THREE.MeshStandardMaterial({ color: 0x7c8791, roughness: 0.95 }));
+        roof.position.y = 4.2;
+        group.add(pool, roof);
+      } else if (kind === 'Спортзал') {
+        const gym = new THREE.Mesh(new THREE.BoxGeometry(18, 7, 12), new THREE.MeshStandardMaterial({ color: 0xd9e4ef, roughness: 0.85 }));
+        gym.position.y = 3.5;
+        group.add(gym);
+      } else if (kind === 'Хоккейная коробка') {
+        const rink = new THREE.Mesh(new THREE.BoxGeometry(22, 0.8, 14), new THREE.MeshStandardMaterial({ color: 0xe9f4ff, roughness: 0.95 }));
+        rink.position.y = 0.2;
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, transparent: true, opacity: 0.85 });
+        const wall1 = new THREE.Mesh(new THREE.BoxGeometry(22, 1.2, 0.3), wallMat); wall1.position.set(0, 0.8, -7);
+        const wall2 = new THREE.Mesh(new THREE.BoxGeometry(22, 1.2, 0.3), wallMat); wall2.position.set(0, 0.8, 7);
+        const wall3 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 14), wallMat); wall3.position.set(-11, 0.8, 0);
+        const wall4 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 14), wallMat); wall4.position.set(11, 0.8, 0);
+        group.add(rink, wall1, wall2, wall3, wall4);
+      }
+      group.position.set(x, 0, z);
+      cityGroup.add(group);
+      createLabel(kind, x, 18, z);
+      return group;
+    }
     // ---------------------------
     // Street lights (night mode)
     // ---------------------------
@@ -622,9 +701,9 @@ grassMap.anisotropy = 2;
       nightLights.push({ type:'emissive', mesh: lamp, onIntensity: 2.5 });
       return { pole, light, lamp };
     }
-    // Place lights along main road + city road
-    for(let z=-900; z<=900; z+=90) addStreetLight(-140, z, 10, 0xffe1b3, 80, 46);
-    for(let x=-1240; x<=-120; x+=120) addStreetLight(x, 250, 9, 0xffe1b3, 55, 38);
+    // Place lights only along the sides of the main road
+    for(let x=-1000; x<=250; x+=140) addStreetLight(x, 182, 9, 0xffe1b3, 55, 38);
+    for(let x=-1000; x<=250; x+=140) addStreetLight(x, 258, 9, 0xffe1b3, 55, 38);
     // ---------------------------
     // Power lines (simple) + substation hint
     // ---------------------------
@@ -696,25 +775,47 @@ grassMap.anisotropy = 2;
       const pos = new THREE.Vector3();
       const quat = new THREE.Quaternion();
       const scl = new THREE.Vector3();
-      for(let i=0;i<count;i++){
+      const allowedZones = [
+        { xMin: -1600, xMax: -1100, zMin: -1600, zMax: 1600 },
+        { xMin: 900, xMax: 1600, zMin: -1600, zMax: 1600 },
+        { xMin: -1100, xMax: 900, zMin: 850, zMax: 1600 },
+        { xMin: -1100, xMax: 900, zMin: -1600, zMax: -700 },
+      ];
+      const blockedZones = [
+        { xMin: -1120, xMax: -760, zMin: 110, zMax: 340 },
+        { xMin: -60, xMax: 580, zMin: -170, zMax: 230 },
+        { xMin: -520, xMax: -330, zMin: 140, zMax: 300 },
+      ];
+      const inZone = (px, pz, zone) => px >= zone.xMin && px <= zone.xMax && pz >= zone.zMin && pz <= zone.zMax;
+      const isAllowed = (px, pz) => allowedZones.some(zone => inZone(px, pz, zone)) && !blockedZones.some(zone => inZone(px, pz, zone));
+      let placed = 0;
+      let attempts = 0;
+      while (placed < count && attempts < count * 24) {
+        attempts += 1;
         pos.set(
           area.xMin + rand()*(area.xMax-area.xMin),
           2,
           area.zMin + rand()*(area.zMax-area.zMin)
         );
+        if (!isAllowed(pos.x, pos.z)) continue;
         const s = 0.8 + rand()*1.4;
         scl.set(s, 0.9+rand()*1.2, s);
         quat.setFromEuler(new THREE.Euler(0, rand()*Math.PI*2, 0));
         m.compose(pos, quat, scl);
-        trunks.setMatrixAt(i, m);
+        trunks.setMatrixAt(placed, m);
         const pos2 = pos.clone(); pos2.y = 7.0;
         const scl2 = new THREE.Vector3(s*1.05, (0.9+rand()*1.1), s*1.05);
         m.compose(pos2, quat, scl2);
-        crowns.setMatrixAt(i, m);
+        crowns.setMatrixAt(placed, m);
+        placed += 1;
       }
+      trunks.count = placed;
+      crowns.count = placed;
+      trunks.instanceMatrix.needsUpdate = true;
+      crowns.instanceMatrix.needsUpdate = true;
       scene.add(trunks, crowns);
     }
-    addPineForest(900, { xMin: -1600, xMax: 1600, zMin: -1600, zMax: 1600 });
+    addPineForest(520, { xMin: -1600, xMax: 1600, zMin: -1600, zMax: 1600 });
     // ---------------------------
     // Labels (same idea but cleaner)
     // ---------------------------
@@ -781,14 +882,56 @@ grassMap.anisotropy = 2;
     for(let i=0;i<12;i++){
       addContainer(420 + (i%6)*14, 210 - Math.floor(i/6)*8, (i%2?0x2b6cb0:0xc13b2a));
     }
-    // City placement (more realistic than single houses)
-    createApartmentBlock(-1040, 150, 9, 28, 18);
-    createApartmentBlock(-940,  150, 12, 30, 18);
-    createApartmentBlock(-840,  150, 10, 28, 18);
-    createApartmentBlock(-1040, 290, 8,  26, 18);
-    createApartmentBlock(-940,  290, 11, 30, 18);
-    createApartmentBlock(-840,  290, 9,  28, 18);
+    // City placement scales with employee count
+    const employeeCount = Math.max(0, Number(data.employees) || 0);
+    const residentialBlockCount = Math.max(6, Math.ceil(employeeCount / 15));
+    const residentialColumns = [-1040, -940, -840];
+    const residentialRowStartZ = 150;
+    const residentialRowStepZ = 140;
+    for (let i = 0; i < residentialBlockCount; i++) {
+      const row = Math.floor(i / residentialColumns.length);
+      const col = i % residentialColumns.length;
+      const x = residentialColumns[col];
+      const z = residentialRowStartZ + row * residentialRowStepZ;
+      const floors = 8 + ((employeeCount + i) % 5);
+      const width = 26 + (i % 3) * 2;
+      createApartmentBlock(x, z, floors, width, 18);
+    }
     createSchoolOrKindergarten(-1180, 260, 'kinder');
+    const landscapingItems = Array.isArray(data.landscaping) ? data.landscaping.slice() : [];
+    const sportsItems = Array.isArray(data.sports) ? data.sports : [];
+    const amenityPlacements = {
+      'Сквер с фонтаном': [{ x: -1185, z: 105 }],
+      'Беседки': [{ x: -1130, z: 105 }],
+      'Пруд': [{ x: -1185, z: 340 }],
+      'Арт-объект': [{ x: -1130, z: 340 }],
+      'Уличные тренажёры': [{ x: -1075, z: 340 }],
+      'Стадион': [{ x: -1075, z: 105 }],
+      'Бассейн': [{ x: -1020, z: 340 }],
+      'Спортзал': [{ x: -1020, z: 105 }],
+      'Сцена': [{ x: -965, z: 340 }],
+      'Хоккейная коробка': [{ x: -965, z: 105 }],
+    };
+    function getAmenityPlacement(kind, index, isSports) {
+      const placements = amenityPlacements[kind];
+      if (placements && placements.length > 0) {
+        return placements[index % placements.length];
+      }
+      const rowZ = isSports ? [105, 340] : [105, 340];
+      const colX = isSports ? [-1075, -1020, -965] : [-1240, -1185, -1130];
+      return {
+        x: colX[index % colX.length],
+        z: rowZ[Math.floor(index / colX.length) % rowZ.length]
+      };
+    }
+    landscapingItems.forEach((item, index) => {
+      const anchor = getAmenityPlacement(item, index, false);
+      addAmenity(item, anchor.x, anchor.z);
+    });
+    sportsItems.forEach((item, index) => {
+      const anchor = getAmenityPlacement(item, index, true);
+      addAmenity(item, anchor.x, anchor.z);
+    });
     // ---------------------------
     // Time of day toggle (day <-> night)
     // ---------------------------
@@ -802,7 +945,6 @@ grassMap.anisotropy = 2;
         hemi.intensity = 0.12;
         sun.intensity = 0.25;
         renderer.toneMappingExposure = 0.95;
-        // lights on
         nightLights.forEach(o=>{
           if (o.type === 'point') o.light.intensity = o.onIntensity;
           if (o.type === 'emissive') o.mesh.material.emissiveIntensity = o.onIntensity || 1.2;
