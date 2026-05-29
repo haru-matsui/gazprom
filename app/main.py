@@ -6,7 +6,6 @@ from app.services import run_scoring_algorithm
 
 app = FastAPI(title="GPN Scoring API")
 
-# Load data at startup
 DATA_PATH = Path(__file__).parent.parent / "baza.json"
 with open(DATA_PATH, "r", encoding="utf-8-sig") as f:
     database = json.load(f)
