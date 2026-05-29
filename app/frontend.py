@@ -18,6 +18,82 @@ from pypdf import PdfReader, PdfWriter
 # load .env from project root (if present)
 load_dotenv()
 
+@st.cache_data
+def load_scene_html():
+    """Кэширование чтения HTML шаблона сцены Three.js"""
+    try:
+        with open("app/three_scene.html", "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return None
+
+@st.cache_resource
+def get_playwright_browser(headless=True):
+    """Кэширование экземпляра браузера Playwright"""
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=headless)
+        return browser, p
+
+@st.cache_resource
+def create_pdf_cached(presentation_html, slide_css):
+    """Кэширование создания PDF презентации"""
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1400, "height": 900}, device_scale_factor=1)
+        page.set_content(presentation_html, wait_until="networkidle")
+        page.emulate_media(media="print")
+
+        slides = page.locator(".slide:not(.slide-end)")
+        slide_count = slides.count()
+        writer = PdfWriter()
+
+        for index in range(slide_count):
+            slide_html = slides.nth(index).evaluate("element => element.outerHTML")
+            single_slide_html = build_presentation_document(slide_css, f'<div class="presentation-wrapper">{slide_html}</div>')
+            slide_page = browser.new_page(viewport={"width": 1400, "height": 900}, device_scale_factor=1)
+            slide_page.set_content(single_slide_html, wait_until="networkidle")
+            slide_page.emulate_media(media="print")
+            slide_pdf = slide_page.pdf(
+                print_background=True,
+                prefer_css_page_size=True,
+                scale=0.92,
+            )
+            slide_page.close()
+            reader = PdfReader(BytesIO(slide_pdf))
+            for pdf_page in reader.pages:
+                writer.add_page(pdf_page)
+
+        output = BytesIO()
+        writer.write(output)
+        browser.close()
+        return output.getvalue()
+
+@st.cache_resource
+def create_pptx_cached(presentation_html):
+    """Кэширование создания PPTX презентации"""
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1200, "height": 900}, device_scale_factor=1)
+        page.set_content(presentation_html, wait_until="networkidle")
+        page.emulate_media(media="screen")
+
+        slides = page.locator(".slide:not(.slide-end)")
+        slide_count = slides.count()
+        presentation = Presentation()
+        presentation.slide_width = Inches(13.333)
+        presentation.slide_height = Inches(7.5)
+        blank_layout = presentation.slide_layouts[6]
+
+        for index in range(slide_count):
+            slide = presentation.slides.add_slide(blank_layout)
+            image_bytes = slides.nth(index).screenshot(type="png")
+            slide.shapes.add_picture(BytesIO(image_bytes), 0, 0, width=presentation.slide_width, height=presentation.slide_height)
+
+        output = BytesIO()
+        presentation.save(output)
+        browser.close()
+        return output.getvalue()
+
 
 def _safe_filename(value, fallback="presentation"):
         cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", str(value)).strip()
@@ -127,62 +203,6 @@ def build_presentation_document(slide_css, slides_html, reset_script=""):
 </html>"""
 
 
-def create_pdf_bytes(presentation_html, slide_css):
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page(viewport={"width": 1400, "height": 900}, device_scale_factor=1)
-        page.set_content(presentation_html, wait_until="networkidle")
-        page.emulate_media(media="print")
-
-        slides = page.locator(".slide:not(.slide-end)")
-        slide_count = slides.count()
-        writer = PdfWriter()
-
-        for index in range(slide_count):
-            slide_html = slides.nth(index).evaluate("element => element.outerHTML")
-            single_slide_html = build_presentation_document(slide_css, f'<div class="presentation-wrapper">{slide_html}</div>')
-            slide_page = browser.new_page(viewport={"width": 1400, "height": 900}, device_scale_factor=1)
-            slide_page.set_content(single_slide_html, wait_until="networkidle")
-            slide_page.emulate_media(media="print")
-            slide_pdf = slide_page.pdf(
-                print_background=True,
-                prefer_css_page_size=True,
-                scale=0.92,
-            )
-            slide_page.close()
-            reader = PdfReader(BytesIO(slide_pdf))
-            for pdf_page in reader.pages:
-                writer.add_page(pdf_page)
-
-        output = BytesIO()
-        writer.write(output)
-        browser.close()
-        return output.getvalue()
-
-
-def create_pptx_bytes(presentation_html):
-        with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page(viewport={"width": 1200, "height": 900}, device_scale_factor=1)
-                page.set_content(presentation_html, wait_until="networkidle")
-                page.emulate_media(media="screen")
-
-                slides = page.locator(".slide:not(.slide-end)")
-                slide_count = slides.count()
-                presentation = Presentation()
-                presentation.slide_width = Inches(13.333)
-                presentation.slide_height = Inches(7.5)
-                blank_layout = presentation.slide_layouts[6]
-
-                for index in range(slide_count):
-                        slide = presentation.slides.add_slide(blank_layout)
-                        image_bytes = slides.nth(index).screenshot(type="png")
-                        slide.shapes.add_picture(BytesIO(image_bytes), 0, 0, width=presentation.slide_width, height=presentation.slide_height)
-
-                output = BytesIO()
-                presentation.save(output)
-                browser.close()
-                return output.getvalue()
 def generate_concept_board_openrouter(region_name, cultural_code):
     # API key must be provided via environment variable `OPENROUTER_API_KEY` or a .env file
     api_key = os.getenv("OPENROUTER_API_KEY")
@@ -424,12 +444,14 @@ if st.session_state.get("calculated", False):
                     "color_palette": colors_from_code if colors_from_code else ["#555555", "#999999", "#cccccc"]
                 }
                 try:
-                    with open("app/three_scene.html", "r", encoding="utf-8") as f:
-                        html_template = f.read()
-                    runtime_html = html_template.replace("__DATA_PLACEHOLDER__", json.dumps(three_js_data))
-                    components.html(runtime_html, height=550, scrolling=False)
-                except FileNotFoundError:
-                    st.error("Не удалось найти файл шаблона сцены `three_scene.html` в папке проекта.")
+                    html_template = load_scene_html()
+                    if html_template:
+                        runtime_html = html_template.replace("__DATA_PLACEHOLDER__", json.dumps(three_js_data))
+                        components.html(runtime_html, height=550, scrolling=False)
+                    else:
+                        st.error("Не удалось найти файл шаблона сцены `three_scene.html` в папке проекта.")
+                except Exception as e:
+                    st.error(f"Ошибка при загрузке шаблона сцены: {e}")
                 st.markdown("---")
                 st.markdown("####Архитектурный концепт-борд (AI Генерация)")
                 st.write(
@@ -468,7 +490,7 @@ if st.session_state.get("calculated", False):
     align-items: center;
     gap: 80px;
     padding: 60px 0;
-    background-color: #2b2b2b;
+    background: linear-gradient(180deg, #f6f8fc 0%, #eef3f9 100%);
     border-radius: 15px;
     margin-top: 20px;
     height: 700px;
@@ -479,8 +501,9 @@ if st.session_state.get("calculated", False):
 .slide {
     width: 1000px;
     height: 562px;
-    background: #e8e8e8;
-    box-shadow: 0 12px 36px rgba(0,0,0,0.5);
+    background: #ffffff;
+    box-shadow: 0 12px 36px rgba(23, 33, 43, 0.12);
+    border: 1px solid #d8e0ea;
     border-radius: 12px;
     display: flex;
     flex-direction: column;
@@ -491,19 +514,21 @@ if st.session_state.get("calculated", False):
     flex: 0 0 auto;
 }
 .slide-header {
-    background: #222222;
-    color: white;
+    background: linear-gradient(135deg, #edf3fa 0%, #dfeaf6 100%);
+    color: #17324d;
     padding: 24px 50px;
     font-size: 28px;
-    font-weight: 600;
+    font-weight: 700;
     display: flex;
     align-items: center;
+    border-bottom: 1px solid #d2dce8;
 }
 .slide-body {
     padding: 40px 50px;
     flex: 1;
     display: flex;
     gap: 40px;
+    color: #1a2430;
 }
 .slide-col {
     flex: 1;
@@ -512,45 +537,45 @@ if st.session_state.get("calculated", False):
     gap: 16px;
 }
 .info-box {
-    background: #d9d9d9;
-    border-left: 5px solid #555555;
+    background: #f4f8fc;
+    border-left: 5px solid #7ca3c9;
     padding: 18px 24px;
     border-radius: 6px;
 }
 .info-box.accent {
-    border-left: 5px solid #333333;
-    background: #cccccc;
+    border-left: 5px solid #2f6fad;
+    background: #eaf2fb;
 }
 .info-box h4 {
     margin: 0 0 8px 0;
-    color: #444;
+    color: #526376;
     font-size: 16px;
-    font-weight: normal;
+    font-weight: 600;
 }
 .info-box p {
     margin: 0;
     font-size: 26px;
-    font-weight: bold;
-    color: #222;
+    font-weight: 700;
+    color: #102030;
 }
 .info-box.accent p {
-    color: #111;
+    color: #0f2a46;
 }
 .list-group {
     margin-top: 10px;
 }
 .list-item {
     font-size: 18px;
-    color: #333;
+    color: #243140;
     margin-bottom: 14px;
     line-height: 1.4;
 }
 .list-item strong {
-    color: #111;
+    color: #102030;
 }
 .title-slide {
-    background: linear-gradient(135deg, #2b2b2b 0%, #1a1a1a 100%);
-    color: white;
+    background: linear-gradient(135deg, #f7fbff 0%, #e7f0f9 100%);
+    color: #102030;
     justify-content: center;
     align-items: center;
     text-align: center;
@@ -559,18 +584,18 @@ if st.session_state.get("calculated", False):
 .title-slide h1 {
     font-size: 54px;
     margin-bottom: 24px;
-    color: #ffffff;
+    color: #102030;
     line-height: 1.2;
 }
 .title-slide h2 {
     font-size: 34px;
-    color: #bbbbbb;
-    font-weight: 300;
+    color: #36546f;
+    font-weight: 400;
 }
 .section-title {
     font-size: 22px;
-    color: #666666 !important;
-    border-bottom: 2px solid #cccccc;
+    color: #4a627a !important;
+    border-bottom: 2px solid #d3deea;
     padding-bottom: 10px;
     margin-bottom: 15px;
     margin-top: 0;
@@ -579,23 +604,23 @@ if st.session_state.get("calculated", False):
     width: 10px;
 }
 .presentation-wrapper::-webkit-scrollbar-track {
-    background: #1a1a1a;
+    background: #e5edf5;
     border-radius: 10px;
 }
 .presentation-wrapper::-webkit-scrollbar-thumb {
-    background: #555;
+    background: #b4c3d4;
     border-radius: 10px;
 }
 .presentation-wrapper::-webkit-scrollbar-thumb:hover {
-    background: #777;
+    background: #90a7bd;
 }
 .slide-end {
-    background: linear-gradient(135deg, #141414 0%, #232323 100%);
-    color: white;
+    background: linear-gradient(135deg, #f4f8fc 0%, #e5eef7 100%);
+    color: #102030;
 }
 .slide-end .slide-header {
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
+    background: rgba(47, 111, 173, 0.08);
+    color: #16324a;
 }
 .slide-end .slide-body {
     align-items: center;
@@ -604,24 +629,25 @@ if st.session_state.get("calculated", False):
 }
 .end-badge {
     display: inline-block;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(47, 111, 173, 0.08);
+    border: 1px solid rgba(47, 111, 173, 0.18);
     border-radius: 999px;
     padding: 10px 18px;
     margin-bottom: 18px;
     font-size: 16px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    color: #274861;
 }
 .end-title {
     font-size: 42px;
     font-weight: 700;
     margin: 0 0 14px 0;
-    color: #ffffff;
+    color: #102030;
 }
 .end-text {
     font-size: 22px;
-    color: #d8d8d8;
+    color: #4c6074;
     line-height: 1.5;
     margin: 0;
 }
@@ -638,8 +664,8 @@ if st.session_state.get("calculated", False):
 <div class="slide title-slide">
 <h1>Проект строительства<br>производственного комплекса</h1>
 <h2>{top1['name']}</h2>
-<div class="title-subtitle" style="margin-top: 50px; padding-top: 40px; border-top: 1px solid rgba(255,255,255,0.3); width: 60%;">
-<p style="font-size: 24px; color: #a8c1e8; margin: 0;">Стратегия локализации на основе оценки региона</p>
+<div class="title-subtitle" style="margin-top: 50px; padding-top: 40px; border-top: 1px solid rgba(47,111,173,0.18); width: 60%;">
+<p style="font-size: 24px; color: #35608a; margin: 0;">Стратегия локализации на основе оценки региона</p>
 </div>
 </div>
 <div class="slide">
@@ -691,10 +717,10 @@ if st.session_state.get("calculated", False):
 </div>
 <div class="slide-col">
 <h3 class="section-title">Логистические нормативы</h3>
-<div class="list-group" style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+<div class="list-group" style="background: #f7fbff; padding: 20px; border-radius: 8px; border: 1px solid #dbe6f2;">
 <div class="list-item">🚂 <strong>Ж/Д ветка:</strong> <span>{has_rail}</span></div>
 <div class="list-item">🛣 <strong>Расстояние до трассы:</strong> <span>{top1['logistics']['distance_to_highway_km']} км</span><br>
-<em style="font-size: 14px; color: #666;">(норматив заявки: до {user_req.get('max_distance_to_highway', 0)} км)</em>
+<em style="font-size: 14px; color: #5b6f82;">(норматив заявки: до {user_req.get('max_distance_to_highway', 0)} км)</em>
 </div>
 <div class="list-item">🏭 <strong>Сырьё (сталь):</strong> <span>{top1['logistics']['distance_to_steel_km']} км</span></div>
 <div class="list-item">📦 <strong>Сырьё (утеплитель):</strong> <span>{top1['logistics']['distance_to_polyurethane_km']} км</span></div>
@@ -720,7 +746,7 @@ if st.session_state.get("calculated", False):
 <div class="slide-col">
 <h3 class="section-title">Социальное развитие региона</h3>
 <div class="list-group">
-<div class="list-item"><strong>Индекс городской среды:</strong> <span style="background:#eaf1ed; padding:4px 10px; border-radius:4px; font-weight:bold; color: #111;">{top1['social']['city_environment_index']} баллов</span></div>
+<div class="list-item"><strong>Индекс городской среды:</strong> <span style="background:#eaf2fb; padding:4px 10px; border-radius:4px; font-weight:bold; color: #102030;">{top1['social']['city_environment_index']} баллов</span></div>
 <div class="list-item"><strong>Мест в детсадах:</strong> <span>{top1['social']['kindergarten_occupancy_per_100_kids']} (на 100 детей)</span></div>
 <div class="list-item"><strong>Профильные колледжи:</strong> <span>{has_coll}</span></div>
 </div>
@@ -760,8 +786,8 @@ if st.session_state.get("calculated", False):
         if st.session_state.get("presentation_export_key") != export_key:
             with st.spinner("Подготавливаем PDF и PPTX..."):
                 try:
-                    st.session_state["presentation_pdf_bytes"] = create_pdf_bytes(presentation_html, slide_css)
-                    st.session_state["presentation_pptx_bytes"] = create_pptx_bytes(presentation_html)
+                    st.session_state["presentation_pdf_bytes"] = create_pdf_cached(presentation_html, slide_css)
+                    st.session_state["presentation_pptx_bytes"] = create_pptx_cached(presentation_html)
                     st.session_state["presentation_export_key"] = export_key
                 except Exception as export_error:
                     st.session_state["presentation_pdf_bytes"] = b""
@@ -769,6 +795,36 @@ if st.session_state.get("calculated", False):
                     st.error(f"Не удалось подготовить файлы презентации: {export_error}")
 
         st.markdown("#### Скачать презентацию")
+        st.markdown(
+            """
+<style>
+[data-testid="stDownloadButton"] button {
+    background: linear-gradient(135deg, #ffffff 0%, #eef4fb 100%);
+    color: #17324d;
+    border: 1px solid #c8d6e5;
+    border-radius: 14px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 8px 20px rgba(23, 33, 43, 0.08);
+    font-weight: 700;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+[data-testid="stDownloadButton"] button:hover {
+    transform: translateY(-1px);
+    border-color: #9fbbd3;
+    box-shadow: 0 12px 26px rgba(23, 33, 43, 0.12);
+    color: #12314d;
+}
+[data-testid="stDownloadButton"] button:disabled {
+    background: #f3f6fa;
+    color: #8c9baa;
+    border-color: #d7e0ea;
+    box-shadow: none;
+    transform: none;
+}
+</style>
+""",
+            unsafe_allow_html=True,
+        )
         download_left, download_right = st.columns(2)
         with download_left:
             st.download_button(
