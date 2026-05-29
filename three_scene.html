@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Индустриальный кластер: Завод + Город (улучшенный рендер)</title>
+  <style>
+    html, body { margin:0; padding:0; overflow:hidden; background:#0f1218; font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    #three-container { width:100vw; height:100vh; }
+    #hud {
+      position: absolute; left: 14px; top: 14px; z-index: 20;
+      color: #e7f4ff; background: rgba(10,12,18,0.55); backdrop-filter: blur(6px);
+      border: 1px solid rgba(0,255,255,0.25); border-radius: 12px;
+      padding: 10px 12px; width: 330px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+    }
+    #hud h1 { font-size: 14px; margin: 0 0 8px 0; font-weight: 700; letter-spacing: .2px; }
+    #hud .row { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size: 12px; margin: 6px 0; }
+    #hud button {
+      cursor:pointer; border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.08); color: #fff;
+      padding: 7px 10px; border-radius: 10px; font-weight: 600;
+    }
+    #hud button:hover { background: rgba(255,255,255,0.12); }
+    #loading {
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      color:white; font-size:20px; font-weight:800; z-index:10; pointer-events:none;
+      background: radial-gradient(ellipse at center, rgba(10,12,18,.35), rgba(10,12,18,.85));
+      text-shadow: 0 2px 18px rgba(0,0,0,0.6);
+    }
+    #hint { opacity:.85; font-size: 11px; line-height: 1.35; margin-top: 8px; color:#d1eaff;}
+    #hint code { background: rgba(0,0,0,0.35); padding: 1px 5px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12); }
+  </style>
+</head>
+<body>
+  <div id="loading">Сборка индустриального кластера…</div>
+  <div id="hud">
+    <h1>Индустриальный кластер</h1>
+    <div class="row">
+      <div>Режим времени</div>
+      <button id="toggle-time">День</button>
+    </div>
+    <div class="row">
+      <div>Камера</div>
+      <button id="focus-factory">Фокус: Завод</button>
+      <button id="focus-city">Фокус: Город</button>
+    </div>
+    <div class="row">
+      <div>Качество</div>
+      <button id="toggle-post">PostFX: On</button>
+    </div>
+    <div id="hint">
+      Управление: <code>ЛКМ</code> орбита, <code>ПКМ</code> панорама, <code>колесо</code> зум. <br/>
+      Подсказка: включи ночь — увидишь фонари, окна, неон и Bloom.
+    </div>
+  </div>
+  <div id="three-container"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/math/SimplexNoise.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/SSAOShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/SSAOPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/ConvolutionShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  <script>
+    // ---------------------------
+    // DATA
+    // ---------------------------
+    let data;
+    try { data = __DATA_PLACEHOLDER__; }
+    catch(e) {
+      data = {
+        shop_area: 25000,
+        warehouse_area: 15000,
+        abk_area: 5000,
+        color_palette: ["#1a5b7f", "#4a5568", "#2d3748"]
+      };
+    }
+    // ---------------------------
+    // Scene / Camera / Renderer
+    // ---------------------------
+    const container = document.getElementById('three-container');
+    const scene = new THREE.Scene();
+    // Physical renderer settings for more "real" look
+    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // sRGB + filmic tonemapping (r128 style)
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.physicallyCorrectLights = true;
+    container.appendChild(renderer.domElement);
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.5, 7000);
+    camera.position.set(-520, 260, 740);
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.055;
+    controls.maxPolarAngle = Math.PI/2 - 0.02;
+    controls.minDistance = 35;
+    controls.maxDistance = 2200;
+    // Fog / sky
+    scene.background = new THREE.Color(0xa9d7ff);
+    scene.fog = new THREE.FogExp2(0xa9d7ff, 0.00125);
+    // ---------------------------
+    // PostFX: SSAO + Bloom (toggleable)
+    // ---------------------------
+    let composer = null;
+    let usePost = true;
+    function buildComposer() {
+      composer = new THREE.EffectComposer(renderer);
+      composer.addPass(new THREE.RenderPass(scene, camera));
+      // SSAO for depth contact shadows feel
+      const ssao = new THREE.SSAOPass(scene, camera, window.innerWidth, window.innerHeight);
+      ssao.kernelRadius = 16;
+      ssao.minDistance = 0.003;
+      ssao.maxDistance = 0.12;
+      ssao.output = THREE.SSAOPass.OUTPUT.Default;
+      composer.addPass(ssao);
+      // Bloom for emissive lights and windows at night
+      const bloom = new THREE.UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        0.75,  // strength
+        0.55,  // radius
+        0.85   // threshold
+      );
+      composer.addPass(bloom);
+      // copy to screen
+      const copy = new THREE.ShaderPass(THREE.CopyShader);
+      copy.renderToScreen = true;
+      composer.addPass(copy);
+    }
+    buildComposer();
+    // ---------------------------
+    // Utility: seeded random for repeatability
+    // ---------------------------
+    function mulberry32(seed) {
+      return function() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      }
+    }
+    const rand = mulberry32(1337);
+    // ---------------------------
+    // Procedural textures (better asphalt, sidewalks, markings)
+    // ---------------------------
+    function makeCanvasTex(w,h, drawFn, repeatX=1, repeatY=1, srgb=true) {
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      drawFn(ctx, w, h);
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(repeatX, repeatY);
+      if (srgb) tex.encoding = THREE.sRGBEncoding;
+      tex.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
+      return tex;
+    }
+    const grassMap = makeCanvasTex(512,512, (ctx,w,h)=>{
+  ctx.fillStyle = '#3f6a40'; ctx.fillRect(0,0,w,h);
+  // намного меньше точек
+  for(let i=0;i<18000;i++){
+    const g = 80 + Math.floor(rand()*70);
+    const a = 0.10;
+    ctx.fillStyle = `rgba(${25},${g},${25},${a})`;
+    ctx.fillRect(rand()*w, rand()*h, 1, 1);
+  }
+}, 14, 14, true);
+// Чуть меньше “дорогой” фильтрации
+grassMap.anisotropy = 2;
+    const asphaltMap = makeCanvasTex(512,1024, (ctx,w,h)=>{
+      ctx.fillStyle = '#26282c'; ctx.fillRect(0,0,w,h);
+      // speckles + cracks
+      for(let i=0;i<40000;i++){
+        const v = 180 + Math.floor(rand()*60);
+        ctx.fillStyle = `rgba(${v},${v},${v},${0.025+rand()*0.03})`;
+        ctx.fillRect(rand()*w, rand()*h, 1, 1);
+      }
+      for(let i=0;i<1400;i++){
+        ctx.strokeStyle = `rgba(10,10,10,${0.06+rand()*0.08})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        const x=rand()*w, y=rand()*h;
+        ctx.moveTo(x,y);
+        ctx.lineTo(x+(rand()-0.5)*60, y+(rand()-0.5)*60);
+        ctx.stroke();
+      }
+      // faded center line (we'll overlay markings also in geometry)
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      for(let y=0;y<h;y+=70){
+        ctx.fillRect(w*0.49, y, w*0.02, 36);
+      }
+    }, 1, 6, true);
+    const concreteMap = makeCanvasTex(512,512,(ctx,w,h)=>{
+      ctx.fillStyle='#b8bfc6'; ctx.fillRect(0,0,w,h);
+      for(let i=0;i<25000;i++){
+        const v = 170 + Math.floor(rand()*50);
+        ctx.fillStyle=`rgba(${v},${v},${v},${0.06+rand()*0.08})`;
+        ctx.fillRect(rand()*w, rand()*h, 2, 2);
+      }
+      // joints
+      ctx.strokeStyle='rgba(80,80,80,0.35)';
+      ctx.lineWidth=3;
+      for(let x=0;x<=w;x+=128){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+      for(let y=0;y<=h;y+=128){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+    }, 10, 10, true);
+    // ---------------------------
+    // Lights (day/night)
+    // ---------------------------
+    const updatables = [];
+    const nightLights = []; // point lights + emissive objects to toggle feel
+    let isNight = false;
+    const ambient = new THREE.AmbientLight(0xffffff, 0.22);
+    scene.add(ambient);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x2b2f3a, 0.35);
+    hemi.position.set(0, 250, 0);
+    scene.add(hemi);
+    const sun = new THREE.DirectionalLight(0xfff2d6, 3.2);
+    sun.position.set(520, 620, 340);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(4096,4096);
+    sun.shadow.bias = -0.00025;
+    const d = 880;
+    sun.shadow.camera.left = -d;
+    sun.shadow.camera.right = d;
+    sun.shadow.camera.top = d;
+    sun.shadow.camera.bottom = -d;
+    sun.shadow.camera.near = 10;
+    sun.shadow.camera.far = 2200;
+    scene.add(sun);
+    // ---------------------------
+    // Ground / sidewalks / curbs
+    // ---------------------------
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(3200, 3200),
+      new THREE.MeshStandardMaterial({ map: grassMap, roughness: 1.0, metalness: 0.0 })
+    );
+    ground.rotation.x = -Math.PI/2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+    function addPlane(w,l, mat, x,z, y=0.02, rot=0) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w,l), mat);
+      m.rotation.x = -Math.PI/2;
+      m.rotation.z = rot;
+      m.position.set(x,y,z);
+      m.receiveShadow = true;
+      return m;
+    }
+    // asphalt + concrete materials
+    const asphaltMat = new THREE.MeshStandardMaterial({ map: asphaltMap, roughness: 0.92, metalness: 0.02 });
+    const sidewalkMat = new THREE.MeshStandardMaterial({ map: concreteMap, roughness: 0.95, metalness: 0.0 });
+    const curbMat = new THREE.MeshStandardMaterial({ color: 0x9aa3aa, roughness: 0.95 });
+    // ---------------------------
+    // Road network (main road + city grid + factory access)
+    // ---------------------------
+    function buildRoadNetwork() {
+      // Main arterial road (north-south)
+      const mainRoad = addPlane(36, 3200, asphaltMat, -120, 0, 0.03);
+      scene.add(mainRoad);
+      // Side road to city (east-west)
+      const cityRoad = addPlane(1400, 34, asphaltMat, -620, 230, 0.032);
+      scene.add(cityRoad);
+      // Factory access road
+      const factoryAccess = addPlane(520, 28, asphaltMat, 140, -80, 0.032);
+      scene.add(factoryAccess);
+      // Roundabout-ish apron near gate (simple ellipse-ish)
+      const apron = new THREE.Mesh(
+        new THREE.CircleGeometry(70, 48),
+        new THREE.MeshStandardMaterial({ color: 0x2a2c31, roughness: 0.95 })
+      );
+      apron.rotation.x = -Math.PI/2;
+      apron.position.set(-20, 0.031, -80);
+      apron.receiveShadow = true;
+      scene.add(apron);
+      // Sidewalk strips along city road
+      const sw1 = addPlane(1400, 6, sidewalkMat, -620, 230-20, 0.035);
+      const sw2 = addPlane(1400, 6, sidewalkMat, -620, 230+20, 0.035);
+      scene.add(sw1, sw2);
+      // City streets grid
+      for(let i=0;i<6;i++){
+        scene.add(addPlane(650, 18, asphaltMat, -860, 110 + i*70, 0.032)); // east-west streets
+      }
+      for(let i=0;i<6;i++){
+        scene.add(addPlane(18, 520, asphaltMat, -1040 + i*110, 285, 0.032)); // north-south streets
+      }
+      // Curbs around a couple of blocks (cheap approximation)
+      function curbRect(cx,cz,w,l){
+        const h = 0.35;
+        const t = 0.8;
+        const geo1 = new THREE.BoxGeometry(w, h, t);
+        const geo2 = new THREE.BoxGeometry(t, h, l);
+        const a = new THREE.Mesh(geo1, curbMat); a.position.set(cx, h/2, cz-l/2);
+        const b = new THREE.Mesh(geo1, curbMat); b.position.set(cx, h/2, cz+l/2);
+        const c = new THREE.Mesh(geo2, curbMat); c.position.set(cx-w/2, h/2, cz);
+        const d = new THREE.Mesh(geo2, curbMat); d.position.set(cx+w/2, h/2, cz);
+        [a,b,c,d].forEach(m=>{m.castShadow=true; m.receiveShadow=true; scene.add(m);});
+      }
+      curbRect(-860, 250, 620, 420);
+      curbRect(-640, 250, 620, 420);
+    }
+    buildRoadNetwork();
+    // ---------------------------
+    // Markings: lane lines + parking lines (decals via planes)
+    // ---------------------------
+    function markingMaterial(color=0xffffff, opacity=0.85) {
+      return new THREE.MeshStandardMaterial({ color, roughness: 0.8, metalness: 0.0, transparent:true, opacity, depthWrite:false });
+    }
+    function addMarkingRect(w,l,x,z,y=0.04, rotY=0, color=0xffffff, opacity=0.9){
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w,l), markingMaterial(color, opacity));
+      m.rotation.x = -Math.PI/2;
+      m.rotation.z = rotY;
+      m.position.set(x,y,z);
+      m.renderOrder = 2;
+      scene.add(m);
+      return m;
+    }
+    function addDashedCenterLine(x,zStart,zEnd, dash=10, gap=12) {
+      for(let z=zStart; z<zEnd; z += dash+gap){
+        addMarkingRect(0.6, dash, x, z + dash/2, 0.041, 0, 0xffffff, 0.55);
+      }
+    }
+    addDashedCenterLine(-120, -1500, 1500, 12, 14); // main road
+    // ---------------------------
+    // Factory zone: fence, gate, security, parking, logistics yard
+    // ---------------------------
+    const factoryZone = new THREE.Group();
+    scene.add(factoryZone);
+    const fenceMat = new THREE.MeshStandardMaterial({ color: 0x3b424b, roughness: 0.85, metalness: 0.15 });
+    const fencePostMat = new THREE.MeshStandardMaterial({ color: 0x2b3138, roughness: 0.9, metalness: 0.2 });
+    function addFenceSegment(x1,z1,x2,z2, height=3.2) {
+      const dx = x2-x1, dz = z2-z1;
+      const len = Math.sqrt(dx*dx + dz*dz);
+      const midX = (x1+x2)/2, midZ = (z1+z2)/2;
+      // chain panel (simple)
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(len, height, 0.12), fenceMat);
+      panel.position.set(midX, height/2, midZ);
+      panel.rotation.y = Math.atan2(dz, dx);
+      panel.castShadow = true; panel.receiveShadow = true;
+      factoryZone.add(panel);
+      // posts
+      const posts = Math.max(2, Math.floor(len/10));
+      const postGeo = new THREE.BoxGeometry(0.35, height+0.4, 0.35);
+      for(let i=0;i<=posts;i++){
+        const t = i/posts;
+        const px = x1 + dx*t, pz = z1 + dz*t;
+        const post = new THREE.Mesh(postGeo, fencePostMat);
+        post.position.set(px, (height+0.4)/2, pz);
+        post.castShadow = true;
+        factoryZone.add(post);
+      }
+    }
+    // fence perimeter
+    const fx0 = -40, fz0 = -320, fx1 = 520, fz1 = 320;
+    addFenceSegment(fx0, fz0, fx1, fz0);
+    addFenceSegment(fx1, fz0, fx1, fz1);
+    addFenceSegment(fx1, fz1, fx0, fz1);
+    // gate opening on west side
+    addFenceSegment(fx0, fz0, fx0, -120);
+    addFenceSegment(fx0, 40, fx0, fz1);
+    // gate + security booth
+    const booth = new THREE.Group();
+    const boothBody = new THREE.Mesh(new THREE.BoxGeometry(10, 5, 6), new THREE.MeshStandardMaterial({ color: 0xd9dee6, roughness: 0.85 }));
+    boothBody.position.y = 2.5; boothBody.castShadow=true; boothBody.receiveShadow=true;
+    const boothGlass = new THREE.Mesh(new THREE.BoxGeometry(9.2, 3, 5.2), new THREE.MeshPhysicalMaterial({
+      color: 0x2a415a, roughness: 0.08, metalness: 0.2, transmission: 0.2, transparent:true, opacity: 0.9, clearcoat: 1.0
+    }));
+    boothGlass.position.set(0, 2.7, 0);
+    const boothRoof = new THREE.Mesh(new THREE.BoxGeometry(11, 0.6, 7), new THREE.MeshStandardMaterial({ color: 0x303640, roughness: 0.95 }));
+    boothRoof.position.y = 5.3;
+    booth.add(boothBody, boothGlass, boothRoof);
+    booth.position.set(-55, 0, -40);
+    factoryZone.add(booth);
+    const barrier = new THREE.Mesh(new THREE.BoxGeometry(18, 0.6, 0.8), new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.6 }));
+    barrier.position.set(-45, 1.0, -20);
+    barrier.rotation.y = Math.PI/12;
+    barrier.castShadow = true;
+    factoryZone.add(barrier);
+    // factory yard asphalt
+    const yard = addPlane(560, 640, new THREE.MeshStandardMaterial({ color: 0x2a2c31, roughness: 0.95 }), 240, 0, 0.031);
+    factoryZone.add(yard);
+    // parking with lines
+    const parking = addPlane(220, 180, new THREE.MeshStandardMaterial({ color: 0x2b2e34, roughness: 0.95 }), 60, 170, 0.032);
+    factoryZone.add(parking);
+    // parking markings
+    for(let i=0;i<10;i++){
+      addMarkingRect(0.25, 14, -20 + i*18, 170, 0.042, 0, 0xffffff, 0.55);
+    }
+    addMarkingRect(220, 0.3, 60, 80, 0.042, 0, 0xffffff, 0.25);
+    // ---------------------------
+    // Buildings: more "industrial real"
+    // ---------------------------
+    const wallBump = (function(){
+      const c = document.createElement('canvas');
+      c.width=256; c.height=256;
+      const ctx=c.getContext('2d');
+      ctx.fillStyle='#888'; ctx.fillRect(0,0,256,256);
+      ctx.strokeStyle='#000'; ctx.lineWidth=4;
+      for(let y=0;y<=256;y+=32){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(256,y); ctx.stroke(); }
+      for(let x=0;x<=256;x+=64){ ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,256); ctx.stroke(); }
+      const t=new THREE.CanvasTexture(c);
+      t.wrapS=t.wrapT=THREE.RepeatWrapping;
+      return t;
+    })();
+    const metal = new THREE.MeshStandardMaterial({ color: 0xb7bcc2, roughness: 0.35, metalness: 0.75 });
+    const darkMetal = new THREE.MeshStandardMaterial({ color: 0x4a515a, roughness: 0.55, metalness: 0.65 });
+    // emissive window materials for night
+    const windowOff = new THREE.MeshStandardMaterial({ color: 0x1a2b3a, roughness: 0.15, metalness: 0.2 });
+    const windowOn  = new THREE.MeshStandardMaterial({ color: 0x1a2b3a, roughness: 0.15, metalness: 0.2, emissive: 0xffddaa, emissiveIntensity: 1.2 });
+    function makeBuildingMaterial(colorHex) {
+      const bump = wallBump.clone();
+      bump.repeat.set(6, 2);
+      bump.needsUpdate = true;
+      return new THREE.MeshStandardMaterial({ color: new THREE.Color(colorHex), roughness: 0.58, metalness: 0.08, bumpMap: bump, bumpScale: 0.18 });
+    }
+    function addWindowsBand(group, w, z, yStart, yEnd, yStep, side) {
+      // side: +1 front, -1 back
+      const winGeo = new THREE.PlaneGeometry(w-2, 2.8);
+      for(let y=yStart; y<yEnd; y+=yStep){
+        const m = new THREE.Mesh(winGeo, windowOff);
+        m.position.set(0, y, z*side);
+        if (side < 0) m.rotation.y = Math.PI;
+        group.add(m);
+        // remember for toggle
+        nightLights.push({ type:'window', mesh: m });
+      }
+    }
+    function createFactoryBuilding(opts) {
+      const { w, l, h, x, z, color, name, withStack=false, docks=0 } = opts;
+      const g = new THREE.Group();
+      // base slab
+      const slab = new THREE.Mesh(
+        new THREE.BoxGeometry(w+6, 1.2, l+6),
+        new THREE.MeshStandardMaterial({ map: concreteMap, roughness: 0.95, metalness: 0.0 })
+      );
+      slab.position.y = 0.6;
+      slab.receiveShadow = true;
+      g.add(slab);
+      // main volume
+      const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, l), makeBuildingMaterial(color));
+      body.position.y = h/2 + 1.2;
+      body.castShadow = true; body.receiveShadow = true;
+      g.add(body);
+      // roof
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(w+1.2, 0.7, l+1.2), new THREE.MeshStandardMaterial({ color: 0x1f232a, roughness: 0.95 }));
+      roof.position.y = h + 1.7;
+      roof.receiveShadow = true;
+      g.add(roof);
+      // parapet + led strip
+      const led = new THREE.Mesh(
+        new THREE.BoxGeometry(w+1.8, 0.45, l+1.8),
+        new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.0, roughness: 0.4 })
+      );
+      led.position.y = h + 1.35;
+      g.add(led);
+      nightLights.push({ type:'emissive', mesh: led, onIntensity: 1.8 });
+      // windows bands
+      addWindowsBand(g, w, l/2 + 0.01, 6, h-5, 6, +1);
+      addWindowsBand(g, w, l/2 + 0.01, 6, h-5, 6, -1);
+      // docks on one side for warehouse
+      if (docks > 0) {
+        const dockGeo = new THREE.BoxGeometry(10, 6, 3);
+        const dockMat = new THREE.MeshStandardMaterial({ color: 0x2c333b, roughness: 0.85 });
+        for(let i=0;i<docks;i++){
+          const dock = new THREE.Mesh(dockGeo, dockMat);
+          dock.position.set(-w/2 - 5.2, 3.4, -l/2 + 18 + i*14);
+          dock.castShadow = true; dock.receiveShadow = true;
+          g.add(dock);
+          const ramp = new THREE.Mesh(new THREE.BoxGeometry(7, 1.2, 5), new THREE.MeshStandardMaterial({ color: 0x3a4048, roughness: 0.9 }));
+          ramp.position.set(-w/2 - 1.5, 1.1, -l/2 + 18 + i*14);
+          ramp.castShadow = true; ramp.receiveShadow = true;
+          g.add(ramp);
+        }
+      }
+      // rooftop HVAC + fans (animated)
+      const hvacMat = new THREE.MeshStandardMaterial({ color: 0xd7dbe0, roughness: 0.55, metalness: 0.35 });
+      for(let i=0;i<10;i++){
+        if(rand() < 0.4) continue;
+        const hv = new THREE.Mesh(new THREE.BoxGeometry(6, 3, 10), hvacMat);
+        hv.position.set((rand()-0.5)*(w-20), h+3.4, (rand()-0.5)*(l-24));
+        hv.castShadow = true;
+        g.add(hv);
+        const fan = new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.2,0.2,20), darkMetal);
+        fan.position.set(hv.position.x, h+5.0, hv.position.z);
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.15, 0.6), metal);
+        fan.add(blade);
+        g.add(fan);
+        updatables.push(()=> fan.rotation.y += 0.12);
+      }
+      // stack + smoke
+      let smoke = null;
+      if (withStack) {
+        const stackH = 46;
+        const stack = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3.2, stackH, 18), metal);
+        stack.position.set(w/2 - 10, h + stackH/2 + 2, -l/2 + 12);
+        stack.castShadow = true;
+        g.add(stack);
+        // nicer smoke (sprite-like points with turbulence)
+        const count = 120;
+        const geo = new THREE.BufferGeometry();
+        const pos = new Float32Array(count * 3);
+        const life = new Float32Array(count);
+        for(let i=0;i<count;i++){
+          pos[i*3+0] = x + stack.position.x + (rand()-0.5)*1.2;
+          pos[i*3+1] = stack.position.y + stackH/2 + 2 + rand()*12;
+          pos[i*3+2] = z + stack.position.z + (rand()-0.5)*1.2;
+          life[i] = rand()*1.0;
+        }
+        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        geo.setAttribute('life', new THREE.BufferAttribute(life, 1));
+        const mat = new THREE.PointsMaterial({ color: 0xdfe7ee, size: 7.5, transparent: true, opacity: 0.18, depthWrite:false });
+        smoke = new THREE.Points(geo, mat);
+        scene.add(smoke);
+        updatables.push(()=>{
+          const p = smoke.geometry.attributes.position;
+          const lf = smoke.geometry.attributes.life;
+          for(let i=0;i<count;i++){
+            let t = lf.getX(i) + 0.008;
+            if (t > 1.0) t = 0.0;
+            const baseX = x + stack.position.x;
+            const baseY = stack.position.y + stackH/2 + 2;
+            const baseZ = z + stack.position.z;
+            const yy = baseY + t*65;
+            const sway = Math.sin(yy*0.035) * (2.0 + t*3.2);
+            const xx = baseX + sway + (rand()-0.5)*0.15;
+            const zz = baseZ + t*10 + Math.cos(yy*0.03)*1.4;
+            p.setXYZ(i, xx, yy, zz);
+            lf.setX(i, t);
+          }
+          p.needsUpdate = true;
+          lf.needsUpdate = true;
+        });
+      }
+      g.position.set(x, 0, z);
+      scene.add(g);
+      // label (simple)
+      if (name) createLabel(name, x, h + 26, z);
+      return g;
+    }
+    // ---------------------------
+    // City buildings: better blocks + variety
+    // ---------------------------
+    const cityGroup = new THREE.Group();
+    scene.add(cityGroup);
+    function createApartmentBlock(x,z, floors=9, w=26, l=18) {
+      const g = new THREE.Group();
+      const h = floors * 3.1;
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, l),
+        new THREE.MeshStandardMaterial({ color: 0xe7e7ea, roughness: 0.85 })
+      );
+      body.position.y = h/2;
+      body.castShadow=true; body.receiveShadow=true;
+      g.add(body);
+      // balconies stripes
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(w+0.2, 0.22, l+0.5), new THREE.MeshStandardMaterial({ color: 0xb9c2cc, roughness: 0.9 }));
+      for(let i=1;i<floors;i++){
+        const s = stripe.clone();
+        s.position.set(0, i*3.1, 0);
+        g.add(s);
+      }
+      // windows grid
+      const winGeo = new THREE.PlaneGeometry(1.6, 1.6);
+      for(let fy=0; fy<floors; fy++){
+        for(let cx=-w/2+3; cx<w/2-2; cx+=3.2){
+          const w1 = new THREE.Mesh(winGeo, windowOff);
+          w1.position.set(cx, 1.6 + fy*3.1, l/2+0.02);
+          g.add(w1);
+          nightLights.push({ type:'window', mesh: w1 });
+        }
+      }
+      // roof
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(w+1, 0.8, l+1), new THREE.MeshStandardMaterial({ color: 0x49525b, roughness: 0.95 }));
+      roof.position.y = h + 0.4;
+      g.add(roof);
+      g.position.set(x, 0, z);
+      cityGroup.add(g);
+      return g;
+    }
+    function createSchoolOrKindergarten(x,z, kind='kinder') {
+      const g = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.BoxGeometry(38, 8, 24), new THREE.MeshStandardMaterial({ color: kind==='kinder' ? 0xffd15a : 0xd9e6f2, roughness: 0.85 }));
+      base.position.y = 4; base.castShadow=true; base.receiveShadow=true;
+      g.add(base);
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(18, 10, 18), new THREE.MeshStandardMaterial({ color: kind==='kinder' ? 0xff6b57 : 0xc6d6e6, roughness: 0.85 }));
+      wing.position.set(-18, 5, 10); wing.castShadow=true; g.add(wing);
+      // playground
+      const court = addPlane(24, 18, new THREE.MeshStandardMaterial({ color: 0xb88a52, roughness: 0.95 }), 16, -16, 0.033);
+      g.add(court);
+      g.position.set(x,0,z);
+      cityGroup.add(g);
+      createLabel(kind==='kinder' ? "Детский сад" : "Школа", x, 22, z);
+      return g;
+    }
+    // ---------------------------
+    // Street lights (night mode)
+    // ---------------------------
+    function addStreetLight(x,z, height=10, color=0xffe3b3, intensity=65, range=40) {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.22,height,10), new THREE.MeshStandardMaterial({ color: 0x2b2f36, roughness: 0.9, metalness: 0.25 }));
+      pole.position.set(x, height/2, z);
+      pole.castShadow = true;
+      scene.add(pole);
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(3.2,0.18,0.18), pole.material);
+      arm.position.set(x+1.4, height-0.7, z);
+      scene.add(arm);
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff0cc, emissiveIntensity: 0.0 }));
+      lamp.position.set(x+2.9, height-0.7, z);
+      scene.add(lamp);
+      const light = new THREE.PointLight(color, 0, range, 2);
+      light.position.set(x+2.9, height-0.7, z);
+      light.castShadow = false;
+      scene.add(light);
+      nightLights.push({ type:'point', light, onIntensity: intensity });
+      nightLights.push({ type:'emissive', mesh: lamp, onIntensity: 2.5 });
+      return { pole, light, lamp };
+    }
+    // Place lights along main road + city road
+    for(let z=-900; z<=900; z+=90) addStreetLight(-140, z, 10, 0xffe1b3, 80, 46);
+    for(let x=-1240; x<=-120; x+=120) addStreetLight(x, 250, 9, 0xffe1b3, 55, 38);
+    // ---------------------------
+    // Power lines (simple) + substation hint
+    // ---------------------------
+    function addPowerPole(x,z, h=18) {
+      const g = new THREE.Group();
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.45,h,10), new THREE.MeshStandardMaterial({ color: 0x5a5148, roughness: 0.95 }));
+      pole.position.y = h/2;
+      pole.castShadow=true;
+      g.add(pole);
+      const cross = new THREE.Mesh(new THREE.BoxGeometry(10,0.3,0.3), new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.9, metalness: 0.1 }));
+      cross.position.set(0, h-2, 0);
+      cross.castShadow=true;
+      g.add(cross);
+      g.position.set(x,0,z);
+      scene.add(g);
+      return g;
+    }
+    const poles = [];
+    for(let i=0;i<9;i++){
+      poles.push(addPowerPole(520 + i*70, -250 + i*45, 18));
+    }
+    // wires (simple line)
+    function addWire(p1, p2, y=16) {
+      const pts = [];
+      const steps = 18;
+      for(let i=0;i<=steps;i++){
+        const t=i/steps;
+        const x=THREE.MathUtils.lerp(p1.x, p2.x, t);
+        const z=THREE.MathUtils.lerp(p1.z, p2.z, t);
+        const sag = Math.sin(Math.PI*t) * 1.8;
+        pts.push(new THREE.Vector3(x, y - sag, z));
+      }
+      const geo = new THREE.BufferGeometry().setFromPoints(pts);
+      const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x111111 }));
+      scene.add(line);
+      return line;
+    }
+    for(let i=0;i<poles.length-1;i++){
+      const a=poles[i].position, b=poles[i+1].position;
+      addWire(a,b,16);
+      addWire(new THREE.Vector3(a.x,0,a.z+2.2), new THREE.Vector3(b.x,0,b.z+2.2),16);
+      addWire(new THREE.Vector3(a.x,0,a.z-2.2), new THREE.Vector3(b.x,0,b.z-2.2),16);
+    }
+    // Substation block
+    const sub = new THREE.Group();
+    const subBase = new THREE.Mesh(new THREE.BoxGeometry(36, 1.2, 30), new THREE.MeshStandardMaterial({ map: concreteMap, roughness: 0.95 }));
+    subBase.position.y = 0.6; subBase.receiveShadow=true;
+    sub.add(subBase);
+    const subBox = new THREE.Mesh(new THREE.BoxGeometry(26, 12, 18), new THREE.MeshStandardMaterial({ color: 0xcfd6dd, roughness: 0.85 }));
+    subBox.position.y = 6.8; subBox.castShadow=true; subBox.receiveShadow=true;
+    sub.add(subBox);
+    sub.position.set(770, 0, 120);
+    scene.add(sub);
+    createLabel("Подстанция", 770, 22, 120);
+    // ---------------------------
+    // Trees: instanced (faster)
+    // ---------------------------
+    function addPineForest(count, area) {
+      // area: {xMin,xMax,zMin,zMax}
+      const trunkGeo = new THREE.CylinderGeometry(0.35,0.55,4,7);
+      const crownGeo = new THREE.ConeGeometry(3.0, 7.8, 9);
+      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4c3426, roughness: 0.95 });
+      const crownMat = new THREE.MeshStandardMaterial({ color: 0x1b5a2b, roughness: 0.95 });
+      const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, count);
+      const crowns = new THREE.InstancedMesh(crownGeo, crownMat, count);
+      trunks.castShadow = true;
+      crowns.castShadow = true;
+      const m = new THREE.Matrix4();
+      const pos = new THREE.Vector3();
+      const quat = new THREE.Quaternion();
+      const scl = new THREE.Vector3();
+      for(let i=0;i<count;i++){
+        pos.set(
+          area.xMin + rand()*(area.xMax-area.xMin),
+          2,
+          area.zMin + rand()*(area.zMax-area.zMin)
+        );
+        const s = 0.8 + rand()*1.4;
+        scl.set(s, 0.9+rand()*1.2, s);
+        quat.setFromEuler(new THREE.Euler(0, rand()*Math.PI*2, 0));
+        m.compose(pos, quat, scl);
+        trunks.setMatrixAt(i, m);
+        const pos2 = pos.clone(); pos2.y = 7.0;
+        const scl2 = new THREE.Vector3(s*1.05, (0.9+rand()*1.1), s*1.05);
+        m.compose(pos2, quat, scl2);
+        crowns.setMatrixAt(i, m);
+      }
+      scene.add(trunks, crowns);
+    }
+    addPineForest(900, { xMin: -1600, xMax: 1600, zMin: -1600, zMax: 1600 });
+    // ---------------------------
+    // Labels (same idea but cleaner)
+    // ---------------------------
+    function createLabel(text, x, y, z) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512; canvas.height = 160;
+      const ctx = canvas.getContext('2d');
+      // background
+      ctx.fillStyle = 'rgba(10, 12, 18, 0.78)';
+      ctx.fillRect(0,0,512,160);
+      // border
+      ctx.strokeStyle = 'rgba(0,255,255,0.55)';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(10,10,492,140);
+      ctx.font = '700 46px system-ui, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 256, 85);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.encoding = THREE.sRGBEncoding;
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent:true, depthTest:false }));
+      sprite.position.set(x, y, z);
+      sprite.scale.set(48, 15, 1);
+      scene.add(sprite);
+    }
+    // ---------------------------
+    // Scale from areas -> dimensions (as you had, but tuned)
+    // ---------------------------
+    const scaleFactor = 0.34;
+    const shopW = Math.sqrt(data.shop_area) * scaleFactor; const shopL = shopW * 1.75;
+    const whW   = Math.sqrt(data.warehouse_area) * scaleFactor; const whL = whW * 1.45;
+    const abkW  = Math.sqrt(data.abk_area) * scaleFactor; const abkL = abkW * 1.25;
+    // Plant placement
+    const shopX = 250, shopZ = -10;
+    const mainShop = createFactoryBuilding({
+      w: shopW, l: shopL, h: 26,
+      x: shopX, z: shopZ,
+      color: data.color_palette[0] || "#1a5b7f",
+      name: "Главный цех",
+      withStack: true
+    });
+    const warehouse = createFactoryBuilding({
+      w: whW, l: whL, h: 18,
+      x: shopX + shopW/2 + whW/2 + 50, z: shopZ - 40,
+      color: data.color_palette[1] || "#4a5568",
+      name: "Склад + Логистика",
+      docks: 7
+    });
+    const abk = createFactoryBuilding({
+      w: abkW, l: abkL, h: 16,
+      x: shopX - 40, z: shopZ + shopL/2 + abkL/2 + 50,
+      color: data.color_palette[2] || "#2d3748",
+      name: "АБК / Инж. корпус",
+      docks: 0
+    });
+    // Some logistics props
+    function addContainer(x,z,color=0xc13b2a) {
+      const cont = new THREE.Mesh(new THREE.BoxGeometry(12, 3.0, 2.8), new THREE.MeshStandardMaterial({ color, roughness: 0.8, metalness: 0.25 }));
+      cont.position.set(x, 1.5, z);
+      cont.castShadow=true; cont.receiveShadow=true;
+      factoryZone.add(cont);
+    }
+    for(let i=0;i<12;i++){
+      addContainer(420 + (i%6)*14, 210 - Math.floor(i/6)*8, (i%2?0x2b6cb0:0xc13b2a));
+    }
+    // City placement (more realistic than single houses)
+    createApartmentBlock(-1040, 150, 9, 28, 18);
+    createApartmentBlock(-940,  150, 12, 30, 18);
+    createApartmentBlock(-840,  150, 10, 28, 18);
+    createApartmentBlock(-1040, 290, 8,  26, 18);
+    createApartmentBlock(-940,  290, 11, 30, 18);
+    createApartmentBlock(-840,  290, 9,  28, 18);
+    createSchoolOrKindergarten(-1180, 260, 'kinder');
+    // ---------------------------
+    // Time of day toggle (day <-> night)
+    // ---------------------------
+    function setNight(night) {
+      isNight = night;
+      if (night) {
+        scene.background.set(0x0a0f18);
+        scene.fog.color.set(0x0a0f18);
+        scene.fog.density = 0.0019;
+        ambient.intensity = 0.08;
+        hemi.intensity = 0.12;
+        sun.intensity = 0.25;
+        renderer.toneMappingExposure = 0.95;
+        // lights on
+        nightLights.forEach(o=>{
+          if (o.type === 'point') o.light.intensity = o.onIntensity;
+          if (o.type === 'emissive') o.mesh.material.emissiveIntensity = o.onIntensity || 1.2;
+          if (o.type === 'window') o.mesh.material = windowOn;
+        });
+      } else {
+        scene.background.set(0xa9d7ff);
+        scene.fog.color.set(0xa9d7ff);
+        scene.fog.density = 0.00125;
+        ambient.intensity = 0.22;
+        hemi.intensity = 0.35;
+        sun.intensity = 3.2;
+        renderer.toneMappingExposure = 1.05;
+        nightLights.forEach(o=>{
+          if (o.type === 'point') o.light.intensity = 0;
+          if (o.type === 'emissive') o.mesh.material.emissiveIntensity = 0.0;
+          if (o.type === 'window') o.mesh.material = windowOff;
+        });
+      }
+    }
+    // ---------------------------
+    // Intro camera + focus buttons
+    // ---------------------------
+    let intro = true;
+    const targetPos = new THREE.Vector3(-260, 190, 520);
+    camera.position.set(-820, 360, 980);
+    function focusOn(v3) {
+      controls.target.lerp(v3, 0.65);
+      camera.position.lerp(new THREE.Vector3(v3.x - 260, v3.y + 210, v3.z + 520), 0.65);
+      intro = false;
+    }
+    // ---------------------------
+    // UI events
+    // ---------------------------
+    const btnTime = document.getElementById('toggle-time');
+    const btnFactory = document.getElementById('focus-factory');
+    const btnCity = document.getElementById('focus-city');
+    const btnPost = document.getElementById('toggle-post');
+    btnTime.addEventListener('click', ()=>{
+      setNight(!isNight);
+      btnTime.textContent = isNight ? 'Ночь' : 'День';
+    });
+    btnFactory.addEventListener('click', ()=>{
+      focusOn(new THREE.Vector3(shopX, 10, shopZ));
+    });
+    btnCity.addEventListener('click', ()=>{
+      focusOn(new THREE.Vector3(-950, 10, 240));
+    });
+    btnPost.addEventListener('click', ()=>{
+      usePost = !usePost;
+      btnPost.textContent = usePost ? 'PostFX: On' : 'PostFX: Off';
+    });
+    ['mousedown','wheel','touchstart'].forEach(e => container.addEventListener(e, () => intro = false));
+    // ---------------------------
+    // Render loop
+    // ---------------------------
+    document.getElementById('loading').style.display = 'none';
+    function animate() {
+      requestAnimationFrame(animate);
+      if (intro) {
+        camera.position.lerp(targetPos, 0.012);
+        controls.target.lerp(new THREE.Vector3(-300, 30, 300), 0.02);
+        if (camera.position.distanceTo(targetPos) < 7) intro = false;
+      }
+      updatables.forEach(fn => fn());
+      controls.update();
+      if (usePost && composer) composer.render();
+      else renderer.render(scene, camera);
+    }
+    animate();
+    // resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      if (composer) {
+        composer.setSize(window.innerWidth, window.innerHeight);
+      }
+    });
+    // start in day
+    setNight(false);
+  </script>
+</body>
+</html>
