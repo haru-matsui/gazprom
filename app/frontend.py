@@ -255,7 +255,7 @@ def generate_concept_board_openrouter(region_name, cultural_code):
     return None
 st.set_page_config(page_title="Подбор локации", layout="wide")
 st.title("Выбор оптимального региона для строительства")
-st.markdown("Внесите требуемые параметры для скоринга (10 базовых форм):")
+st.markdown("Внесите требуемые параметры для скоринга:")
 if "concept_boards" not in st.session_state:
     st.session_state["concept_boards"] = {}
 if "four_renders" not in st.session_state:
@@ -737,7 +737,7 @@ if st.session_state.get("calculated", False):
 <div>
 <div class="end-badge">Финальный слайд</div>
 <div class="end-title">Спасибо за внимание</div>
-<p class="end-text">Презентация завершена. Ниже можно скачать PDF и PPTX, чтобы открыть их отдельно без потери оформления.</p>
+<p class="end-text">Презентация завершена. Ниже можно скачать PDF и PPTX</p>
 </div>
 </div>
 </div>
