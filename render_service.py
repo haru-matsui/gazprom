@@ -1,11 +1,14 @@
 import base64
+import os
 import requests
 from io import BytesIO
 from PIL import Image
+from dotenv import load_dotenv
 
 # Константы для конфигурации API
-OPENROUTER_API_KEY = "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"
 MODEL_NAME = "bytedance-seed/seedream-4.5"
+
+load_dotenv()
 
 
 def generate_photorealistic_renders(screenshot_base64: str, region_name: str, cultural_code: dict) -> Image.Image:
@@ -16,6 +19,11 @@ def generate_photorealistic_renders(screenshot_base64: str, region_name: str, cu
     style = cultural_code.get('architecture_style', 'modern industrial')
     materials = cultural_code.get('materials', 'sandwich panels, glass')
     colors = ", ".join(cultural_code.get('color_profile', ['gray']))
+    api_key = os.getenv("OPENROUTER_API_KEY")
+
+    if not api_key:
+        print("API key not found. Set OPENROUTER_API_KEY in your environment or in a .env file.")
+        return None
 
     prompt = (
         f"A quad-split 2x2 grid photo, architectural render of an industrial factory in {region_name}. "
@@ -27,7 +35,7 @@ def generate_photorealistic_renders(screenshot_base64: str, region_name: str, cu
     )
 
     headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
 
