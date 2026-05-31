@@ -1190,7 +1190,9 @@ grassMap.anisotropy = 2;
     // ---------------------------
     // Scale from areas -> dimensions (as you had, but tuned)
     // ---------------------------
-    const scaleFactor = 0.34;
+    // Увеличенный визуальный масштаб, чтобы при новых формулах площади выглядели сопоставимо
+    // с предыдущей версией рендера. Формулы в `services.py` не изменены.
+    const scaleFactor = 0.95;
     const shopW = Math.sqrt(data.shop_area) * scaleFactor; const shopL = shopW * 1.75;
     const whW   = Math.sqrt(data.warehouse_area) * scaleFactor; const whL = whW * 1.45;
     const abkW  = Math.sqrt(data.abk_area) * scaleFactor; const abkL = abkW * 1.25;

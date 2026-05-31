@@ -13,24 +13,43 @@ def normalize_direct(value, values):
     result = (value - min_v) / (max_v - min_v)
     return max(0, min(result, 1))
 def calculate_estimate(region, user_input, required_power):
+    # Функция: calculate_estimate
+    # Входные параметры:
+    # - region: словарь с данными по региону (логистика, инфраструктура, экономика, социальные параметры)
+    # - user_input: словарь с входными данными от пользователя (production_volume, employees, housing и т.д.)
+    # - required_power: требуемая мощность для производства (кВА)
+    # Функция вычисляет планируемые площади (м2) для разных объектов, затем оценивает
+    # CapEx и OpEx и возвращает детализированную смету и разбиение по статьям.
     logistics = region["logistics"]
     infra = region["infrastructure"]
     econ = region["economics"]
-    production_m2 = user_input["production_volume"] * 1000
-    employees = user_input["employees"]
-    shop_area = max(7000, production_m2 * 0.026)
+    # Входные значения из user_input
+    production_volume = user_input["production_volume"]  # V — объём производства (тыс. м²/год)
+    employees = user_input["employees"]  # N — количество сотрудников
+
+    # Новые формулы расчёта площадей (соответствуют спецификации):
+    # Цех: V * 4
+    shop_area = production_volume * 4
+    # Склад: цех * 0.35
     warehouse_area = shop_area * 0.35
-    abk_area = employees * 12
+    # АБК: цех * 0.02
+    abk_area = shop_area * 0.02
     housing_percent = user_input["housing"]["percent"] / 100
     housing_type = user_input["housing"]["type"]
     if housing_type == "общежитие":
-        housing_per_person = 22
+        housing_per_person = 25
         housing_cost_per_m2 = 65000
     else:
-        housing_per_person = 38
+        housing_per_person = 42
         housing_cost_per_m2 = 90000
+    # Корпоративное жильё: площадь на сотрудника зависит от типа жилья (T)
+    # - квартира: 40 м2 на человека
+    # - общежитие: 25 м2 на человека
+    # P (housing_percent) — процент сотрудников с жильём
     housing_area = employees * housing_percent * housing_per_person
-    kindergarten_area = user_input["kindergarten_places"] * 15
+    # Детский сад: (N / 100) * K * 12  (K — места в детском саду на 100 сотрудников, 12 м2 на место)
+    kindergarten_k_per_100 = user_input.get("kindergarten_k_per_100", user_input.get("kindergarten_places", 0))
+    kindergarten_area = (employees / 100.0) * kindergarten_k_per_100 * 12
     regional_coef = 1.0
     name = region["name"]
     if "Москва" in name: regional_coef = 1.35
@@ -43,6 +62,17 @@ def calculate_estimate(region, user_input, required_power):
     abk_cost = abk_area * 52000 * regional_coef
     housing_cost = housing_area * housing_cost_per_m2 * regional_coef
     kindergarten_cost = kindergarten_area * 50000 * regional_coef
+    # Столовая: N * 0.8
+    canteen_area = employees * 0.8
+    canteen_cost = canteen_area * 50000 * regional_coef
+    # Медпункт: max(20, N * 0.2)
+    medical_area = max(20, employees * 0.2)
+    medical_cost = medical_area * 55000 * regional_coef
+    # Парковка: N * 0.5 * 0.25  (по новой формуле — сразу м2)
+    parking_area = employees * 7.5
+    parking_cost = parking_area * 3500 * regional_coef
+    # Дороги: (цех + склад) * 0.25
+    roads_area = (shop_area + warehouse_area) * 0.25
     landscaping_prices = {
         "Сквер с фонтаном": 5_000_000,
         "Беседки": 1_000_000, "Сцена": 3_000_000,
@@ -57,7 +87,14 @@ def calculate_estimate(region, user_input, required_power):
     }
     sports_cost = sum([sports_prices.get(i, 0) for i in user_input["sports"]])
     connection_cost = required_power * infra["connection_cost_rub_kwt"]
-    capex = (shop_cost + warehouse_cost + abk_cost + housing_cost + kindergarten_cost + landscaping_cost + sports_cost + connection_cost)
+    capex = (
+        shop_cost + warehouse_cost + abk_cost + housing_cost + kindergarten_cost +
+        landscaping_cost + sports_cost + connection_cost + canteen_cost + medical_cost + parking_cost
+    )
+    # Дополнительные расчёты, связанные с площадью производства (для логистики и Opex):
+    # production_m2 — общая площадь производства в м2 (здесь 1000 м2 на условную единицу объёма)
+    production_m2 = production_volume * 1000
+    # Используется эмпирическое соотношение массы стали/полиуретана на 1 м2
     steel_mass = production_m2 * 0.012
     poly_mass = production_m2 * 0.003
     logistics_tariff = 15
@@ -70,6 +107,8 @@ def calculate_estimate(region, user_input, required_power):
     total_cost = capex + opex
 
     # CapEx breakdown by groups and buildings
+    # Здесь в разбиении CapEx мы используем ранее посчитанные площади и стоимости
+    # Каждая строка показывает название объекта, рассчитанную сумму и суммарную группу
     capex_breakdown = [
         {
             "group": "Производственные помещения",
@@ -83,8 +122,10 @@ def calculate_estimate(region, user_input, required_power):
             "group": "Административно-бытовой корпус (АБК)",
             "items": [
                 {"name": "АБК", "amount": round(abk_cost)},
+                {"name": "Столовая", "amount": round(canteen_cost)},
+                {"name": "Медпункт", "amount": round(medical_cost)},
             ],
-            "total": round(abk_cost)
+            "total": round(abk_cost + canteen_cost + medical_cost)
         },
         {
             "group": "Социальная инфраструктура",
@@ -93,8 +134,9 @@ def calculate_estimate(region, user_input, required_power):
                 {"name": "Детский сад", "amount": round(kindergarten_cost)},
                 {"name": "Благоустройство / ландшафт", "amount": round(landscaping_cost)},
                 {"name": "Спортивные объекты", "amount": round(sports_cost)},
+                {"name": "Парковка корпоративного транспорта", "amount": round(parking_cost)},
             ],
-            "total": round(housing_cost + kindergarten_cost + landscaping_cost + sports_cost)
+            "total": round(housing_cost + kindergarten_cost + landscaping_cost + sports_cost + parking_cost)
         },
         {
             "group": "Инженерные подключения и сеть",
@@ -106,6 +148,7 @@ def calculate_estimate(region, user_input, required_power):
     ]
 
     # OpEx breakdown (годовые или ориентировочные)
+    # В OpEx включены годовые расходы, часть которых зависит от площадей (логистика, энергия)
     opex_breakdown = {
         "items": [
             {"name": "Сталь (логистика)", "amount": round(steel_cost)},
@@ -117,12 +160,19 @@ def calculate_estimate(region, user_input, required_power):
         "total": round(opex)
     }
 
+    # Возвращаем словарь со всеми ключевыми площадями (в м2) и суммами (CapEx, OpEx).
+    # Эти значения затем используются в функции `run_scoring_algorithm` для фильтрации
+    # регионов по бюджету и отображения сметы в интерфейсе.
     return {
         "shop_area": round(shop_area),
         "warehouse_area": round(warehouse_area),
         "abk_area": round(abk_area),
         "housing_area": round(housing_area),
         "kindergarten_area": round(kindergarten_area),
+        "canteen_area": round(canteen_area),
+        "medical_area": round(medical_area),
+        "parking_area": round(parking_area),
+        "roads_area": round(roads_area),
         "capex": round(capex),
         "opex": round(opex),
         "total_cost": round(total_cost),
