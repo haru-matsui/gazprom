@@ -532,6 +532,10 @@ if st.session_state.get("calculated", False):
                     st.write(f"- **Площадь АБК:** {est['abk_area']:,} м²")
                     st.write(f"- **Площадь жилья:** {est['housing_area']:,} м²")
                     st.write(f"- **Площадь детского сада:** {est['kindergarten_area']:,} м²")
+                    st.write(f"- **Площадь столовой:** {est.get('canteen_area', 0):,} м²")
+                    st.write(f"- **Площадь медпункта:** {est.get('medical_area', 0):,} м²")
+                    st.write(f"- **Площадь парковки:** {est.get('parking_area', 0):,} м²")
+                    st.write(f"- **Площадь дорог:** {est.get('roads_area', 0):,} м²")
                     st.write("---")
                     
                 # Полные таблицы CAPEX и OPEX на всю ширину
@@ -597,6 +601,10 @@ if st.session_state.get("calculated", False):
                     "abk_area": est['abk_area'],
                     "housing_area": est['housing_area'],
                     "kindergarten_area": est['kindergarten_area'],
+                    "canteen_area": est.get('canteen_area', 0),
+                    "medical_area": est.get('medical_area', 0),
+                    "parking_area": est.get('parking_area', 0),
+                    "roads_area": est.get('roads_area', 0),
                     "landscaping": st.session_state.get("payload", {}).get('landscaping', []),
                     "sports": st.session_state.get("payload", {}).get('sports', []),
                     "color_palette": colors_from_code if colors_from_code else ["#555555", "#999999", "#cccccc"]
@@ -869,6 +877,12 @@ if st.session_state.get("calculated", False):
 <div class="list-item"><strong>Площадь цеха:</strong> <span>{top1_est['shop_area']:,} м²</span></div>
 <div class="list-item"><strong>Площадь складов:</strong> <span>{top1_est['warehouse_area']:,} м²</span></div>
 <div class="list-item"><strong>CAPEX:</strong> <span style="color:#0056A4; font-weight:bold;">{top1_est['capex']:,} руб.</span></div>
+</div>
+<div class="list-group" style="margin-top:12px;">
+<div class="list-item"><strong>Площадь столовой:</strong> <span>{top1_est.get('canteen_area', 0):,} м²</span></div>
+<div class="list-item"><strong>Площадь медпункта:</strong> <span>{top1_est.get('medical_area', 0):,} м²</span></div>
+<div class="list-item"><strong>Площадь парковки:</strong> <span>{top1_est.get('parking_area', 0):,} м²</span></div>
+<div class="list-item"><strong>Площадь дорог:</strong> <span>{top1_est.get('roads_area', 0):,} м²</span></div>
 </div>
 <h3 class="section-title" style="margin-top: 20px;">Архитектура и среда</h3>
 <div class="list-group">
