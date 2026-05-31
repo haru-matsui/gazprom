@@ -1,0 +1,15 @@
+streamlit
+requests
+folium
+streamlit-folium
+branca
+python-dotenv
+playwright
+python-pptx
+pypdf
+Pillow
+beautifulsoup4
+fastapi
+pydantic
+uvicorn
+
