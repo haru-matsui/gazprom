@@ -2,16 +2,488 @@
   "regions": [
     {
       "id": 1,
-      "name": "Калужская область (ОЭЗ ППТ Калуга - Людиново)",
+      "name": "Краснодарский край (Индустриальный парк Краснодар)",
       "coordinates": {
-        "lat": 53.817068,
-        "lon": 34.520577
+        "lat": 45.128629,
+        "lon": 39.348324
+      },
+      "logistics": {
+        "has_railway": false,
+        "distance_to_steel_km": 9,
+        "steel_supplier_name": "ООО «Южный завод металлоконструкций»",
+        "distance_to_polyurethane_km": 18,
+        "polyurethane_supplier_name": "ООО ПТК «КРПМС»",
+        "distance_to_highway_km": 1
+      },
+      "economics": {
+        "has_oez_benefits": false,
+        "has_insurance_benefits": false,
+        "energy_tariff_rub_kwh": 6.85,
+        "average_salary_rub": 67000,
+        "ecological_class_iza": "Повышенный"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 4500,
+        "distance_to_substation_km": 0.5,
+        "connection_cost_rub_kwt": 5100
+      },
+      "social": {
+        "city_environment_index": 225,
+        "kindergarten_occupancy_per_100_kids": 92,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 28000
+      },
+      "cultural_code": {
+        "architecture_style": "eco-tech",
+        "materials": "Гладкие композитные сэндвич-панели с антикоррозийным покрытием для приморского климата, легкие стальные конструкции",
+        "color_profile": [
+          "#FFFFFF",
+          "#1E4D2B",
+          "#FAD614",
+          "#87CEEB",
+          "#333333"
+        ]
+      },
+      "oez_advantage": "Сокращение сроков запуска (Time to Market) на 6-9 месяцев за счет готового ТУ на газ и 4.5 МВт мощности. Отсутствие жесткого порога ОЭЗ по объему капвложений (от 120 млн руб.)."
+    },
+    {
+      "id": 2,
+      "name": "Краснодарский край (Индустриальный парк Армавир)",
+      "coordinates": {
+        "lat": 45.014795,
+        "lon": 41.069214
       },
       "logistics": {
         "has_railway": true,
-        "distance_to_steel_km": 360,
-        "distance_to_polyurethane_km": 330,
+        "distance_to_steel_km": 370,
+        "steel_supplier_name": "АО Тагмет (Таганрогский металлургический завод) / НЛМК",
+        "distance_to_polyurethane_km": 600,
+        "polyurethane_supplier_name": "АО Каустик (Волгоград) / Химпром",
+        "distance_to_highway_km": 4
+      },
+      "economics": {
+        "has_oez_benefits": false,
+        "has_insurance_benefits": false,
+        "energy_tariff_rub_kwh": 6.40,
+        "average_salary_rub": 54000,
+        "ecological_class_iza": "Низкий"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 12000,
+        "distance_to_substation_km": 1.1,
+        "connection_cost_rub_kwt": 4800
+      },
+      "social": {
+        "city_environment_index": 198,
+        "kindergarten_occupancy_per_100_kids": 98,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 18000
+      },
+      "cultural_code": {
+        "architecture_style": "industrial",
+        "materials": "Комбинированные панели с имитацией фактурной клинкерной кладки глубоких темных тонов и матовой темной стали",
+        "color_profile": [
+          "#4A2C2A",
+          "#7D7F7D",
+          "#2B2B2A",
+          "#D9D9D9",
+          "#111111"
+        ]
+      },
+      "oez_advantage": "Готовая ж/д инфраструктура внутри парка исключает затраты в размере ~20-30 млн руб. на проектирование и строительство собственного тупика. Подключение к 12 МВт по фиксированной цене."
+    },
+    {
+      "id": 3,
+      "name": "Ростовская область (ОЭЗ ППТ Ростовская, Новочеркасск)",
+      "coordinates": {
+        "lat": 47.486176,
+        "lon": 40.146611
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 40,
+        "steel_supplier_name": "ООО «Ростовский завод металлоконструкций»",
+        "distance_to_polyurethane_km": 40,
+        "polyurethane_supplier_name": "ООО «РТ-Полиуретаны»",
+        "distance_to_highway_km": 3
+      },
+      "economics": {
+        "has_oez_benefits": true,
+        "has_insurance_benefits": true,
+        "energy_tariff_rub_kwh": 5.45,
+        "average_salary_rub": 58000,
+        "ecological_class_iza": "Повышенный"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 25000,
+        "distance_to_substation_km": 0.3,
+        "connection_cost_rub_kwt": 3900
+      },
+      "social": {
+        "city_environment_index": 195,
+        "kindergarten_occupancy_per_100_kids": 102,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 17000
+      },
+      "cultural_code": {
+        "architecture_style": "brutalism",
+        "materials": "Фактурные панели под серый монолитный бетон в сочетании со стальными швеллерами и крупноразмерным фасадным остеклением",
+        "color_profile": [
+          "#5C6265",
+          "#8C92AC",
+          "#CF1020",
+          "#343434",
+          "#EAEAEA"
+        ]
+      },
+      "oez_advantage": "Статус ОЭЗ обнуляет налог на имущество на 10 лет, землю на 5 лет и транспорт на 10 лет. Налог на прибыль снижен с 20% до 2% в первые 5 лет, 7% до 10-го года и 15.5% после."
+    },
+    {
+      "id": 4,
+      "name": "Ростовская область (Азовский индустриальный парк)",
+      "coordinates": {
+        "lat": 47.092534,
+        "lon": 39.405986
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 810,
+        "steel_supplier_name": "НЛМК (Липецк)",
+        "distance_to_polyurethane_km": 190,
+        "polyurethane_supplier_name": "Завод полимеров (Ростов-на-Дону)",
         "distance_to_highway_km": 25
+      },
+      "economics": {
+        "has_oez_benefits": false,
+        "has_insurance_benefits": false,
+        "energy_tariff_rub_kwh": 5.90,
+        "average_salary_rub": 62000,
+        "ecological_class_iza": "Низкий"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 4000,
+        "distance_to_substation_km": 1.4,
+        "connection_cost_rub_kwt": 4500
+      },
+      "social": {
+        "city_environment_index": 204,
+        "kindergarten_occupancy_per_100_kids": 96,
+        "has_profile_colleges": false,
+        "rent_1room_apartment_rub": 20000
+      },
+      "cultural_code": {
+        "architecture_style": "modernism",
+        "materials": "Металлические панели с эффектом «кортен» (имитация благородной ржавчины) и полированные гладкие серебристые листы",
+        "color_profile": [
+          "#B4532A",
+          "#466D85",
+          "#DCDCDC",
+          "#2F4F4F",
+          "#0F1E26"
+        ]
+      },
+      "oez_advantage": "Частный ИП: согласование проекта и выход на стройплощадку за 14 дней вместо 3-6 месяцев в госорганах. Нулевые затраты на строительство дорог внутри участка — всё подведено к границе."
+    },
+    {
+      "id": 5,
+      "name": "Свердловская область (ОЭЗ ППТ Титановая долина, Верхняя Салда)",
+      "coordinates": {
+        "lat": 58.056954,
+        "lon": 60.473231
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 40,
+        "steel_supplier_name": "ПАО «Корпорация ВСМПО-АВИСМА»",
+        "distance_to_polyurethane_km": 55,
+        "polyurethane_supplier_name": "ООО «Производственно-коммерческая фирма «Уретантех-М»»",
+        "distance_to_highway_km": 8
+      },
+      "economics": {
+        "has_oez_benefits": true,
+        "has_insurance_benefits": true,
+        "energy_tariff_rub_kwh": 4.85,
+        "average_salary_rub": 72000,
+        "ecological_class_iza": "Повышенный"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 30000,
+        "distance_to_substation_km": 0.5,
+        "connection_cost_rub_kwt": 3200
+      },
+      "social": {
+        "city_environment_index": 182,
+        "kindergarten_occupancy_per_100_kids": 108,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 14000
+      },
+      "cultural_code": {
+        "architecture_style": "constructivism",
+        "materials": "Облицовочные панели с текстурой грубого темного камня (габбро-диабаз) и грубого патинированного железа",
+        "color_profile": [
+          "#1C2A22",
+          "#5A6570",
+          "#7B1A1A",
+          "#B0B7BD",
+          "#111111"
+        ]
+      },
+      "oez_advantage": "Режим СТЗ (Свободная таможенная зона) экономит 20% НДС и до 15% импортных пошлин на оборудование. Налог на прибыль: 2% первые 5 лет, имущество и транспорт — 0% на 10 лет."
+    },
+    {
+      "id": 6,
+      "name": "Свердловская область (Индустриальный парк Уральский, Екатеринбург)",
+      "coordinates": {
+        "lat": 56.776609,
+        "lon": 60.779347
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 45,
+        "steel_supplier_name": "НЛМК-Урал (Ревда)",
+        "distance_to_polyurethane_km": 15,
+        "polyurethane_supplier_name": "Уральский завод полимеров (Екатеринбург)",
+        "distance_to_highway_km": 0.5
+      },
+      "economics": {
+        "has_oez_benefits": false,
+        "has_insurance_benefits": false,
+        "energy_tariff_rub_kwh": 5.40,
+        "average_salary_rub": 83000,
+        "ecological_class_iza": "Высокий"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 8000,
+        "distance_to_substation_km": 0.9,
+        "connection_cost_rub_kwt": 4600
+      },
+      "social": {
+        "city_environment_index": 214,
+        "kindergarten_occupancy_per_100_kids": 104,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 28000
+      },
+      "cultural_code": {
+        "architecture_style": "high-tech",
+        "materials": "Зеркальное остекление, матовые композитные панели цвета графит со скрытым типом крепления",
+        "color_profile": [
+          "#25282A",
+          "#696969",
+          "#008080",
+          "#EAEAEA",
+          "#1F1F1F"
+        ]
+      },
+      "oez_advantage": "Расположение в черте ЕКАД снижает стоимость доставки сырья/готовой продукции на 15-20%. Прямой доступ к кадрам (Екатеринбург), отсутствие затрат на вахтовый транспорт."
+    },
+    {
+      "id": 7,
+      "name": "Республика Татарстан (ОЭЗ ППТ Алабуга)",
+      "coordinates": {
+        "lat": 55.805376,
+        "lon": 52.021366
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 5,
+        "steel_supplier_name": "ООО «Машиностроительный завод Аконит»",
+        "distance_to_polyurethane_km": 50,
+        "polyurethane_supplier_name": "ООО «Полихим Системс»",
+        "distance_to_highway_km": 1
+      },
+      "economics": {
+        "has_oez_benefits": true,
+        "has_insurance_benefits": true,
+        "energy_tariff_rub_kwh": 4.15,
+        "average_salary_rub": 68000,
+        "ecological_class_iza": "Низкий"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 45000,
+        "distance_to_substation_km": 0.4,
+        "connection_cost_rub_kwt": 2900
+      },
+      "social": {
+        "city_environment_index": 218,
+        "kindergarten_occupancy_per_100_kids": 95,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 16000
+      },
+      "cultural_code": {
+        "architecture_style": "futurism",
+        "materials": "Гладкие панели цвета белый и искрящийся алюминий, акцентные вставки из композита насыщенного бирюзового оттенка",
+        "color_profile": [
+          "#FFFFFF",
+          "#008073",
+          "#D4AF37",
+          "#4A4A4A",
+          "#1C1C1C"
+        ]
+      },
+      "oez_advantage": "Полное обнуление налогов на имущество (10 лет), землю (5 лет) и транспорт (10 лет). Налог на прибыль: 2% первые 5 лет, 7% с 6 по 10 год. Готовые корпуса (SMC) экономят до 40% CAPEX на старте."
+    },
+    {
+      "id": 8,
+      "name": "Республика Татарстан (Индустриальный парк Лаишево)",
+      "coordinates": {
+        "lat": 55.628247,
+        "lon": 49.296261
+      },
+      "logistics": {
+        "has_railway": false,
+        "distance_to_steel_km": 700,
+        "steel_supplier_name": "ММК / НЛМК-Урал",
+        "distance_to_polyurethane_km": 45,
+        "polyurethane_supplier_name": "Казаньоргсинтез / Нижнекамскнефтехим",
+        "distance_to_highway_km": 2
+      },
+      "economics": {
+        "has_oez_benefits": false,
+        "has_insurance_benefits": false,
+        "energy_tariff_rub_kwh": 4.60,
+        "average_salary_rub": 74000,
+        "ecological_class_iza": "Низкий"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 6500,
+        "distance_to_substation_km": 1.5,
+        "connection_cost_rub_kwt": 3600
+      },
+      "social": {
+        "city_environment_index": 222,
+        "kindergarten_occupancy_per_100_kids": 97,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 25000
+      },
+      "cultural_code": {
+        "architecture_style": "eco-urbanism",
+        "materials": "Сэндвич-панели с качественной УФ-печатью под светлую древесину лиственницы, анодированный матовый черный металл",
+        "color_profile": [
+          "#D2B48C",
+          "#2F4F4F",
+          "#F5F5DC",
+          "#1A1A1A",
+          "#708090"
+        ]
+      },
+      "oez_advantage": "Ускоренное межевание участка под параметры цеха за 30 дней. Готовые ТУ на газ и воду включены в стоимость аренды земли, снижая скрытые затраты на подготовку участка на 10-12%."
+    },
+    {
+      "id": 9,
+      "name": "Новосибирская область (Индустриальный парк Нова)",
+      "coordinates": {
+        "lat": 55.069833,
+        "lon": 82.843371
+      },
+      "logistics": {
+        "has_railway": false,
+        "distance_to_steel_km": 6,
+        "steel_supplier_name": "ООО «Сибирский завод металлоконструкций»",
+        "distance_to_polyurethane_km": 20,
+        "polyurethane_supplier_name": "ООО «Полиуретан»",
+        "distance_to_highway_km": 0.2
+      },
+      "economics": {
+        "has_oez_benefits": false,
+        "has_insurance_benefits": false,
+        "energy_tariff_rub_kwh": 5.10,
+        "average_salary_rub": 69000,
+        "ecological_class_iza": "Повышенный"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 5000,
+        "distance_to_substation_km": 2.1,
+        "connection_cost_rub_kwt": 4100
+      },
+      "social": {
+        "city_environment_index": 192,
+        "kindergarten_occupancy_per_100_kids": 101,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 22000
+      },
+      "cultural_code": {
+        "architecture_style": "functionalism",
+        "materials": "Панели увеличенной толщины глубокого темно-синего и серого цветов с повышенным классом огнестойкости",
+        "color_profile": [
+          "#1C3B57",
+          "#4A5568",
+          "#E2E8F0",
+          "#A0AEC0",
+          "#111625"
+        ]
+      },
+      "oez_advantage": "Локация вблизи ТЛЦ «Клещиха» снижает контейнерное плечо до 6 км. Возможность размещения мелкого производства (от 0.5 га), что запрещено регламентами крупных федеральных ОЭЗ."
+    },
+    {
+      "id": 10,
+      "name": "Новосибирская область (Индустриальный парк ПЛП)",
+      "coordinates": {
+        "lat": 55.012644,
+        "lon": 82.592132
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 390,
+        "steel_supplier_name": "ЕВРАЗ ЗСМК (Новокузнецк)",
+        "distance_to_polyurethane_km": 1380,
+        "polyurethane_supplier_name": " Салаватнефтеоргсинтез",
+        "distance_to_highway_km": 0.1
+      },
+      "economics": {
+        "has_oez_benefits": false,
+        "has_insurance_benefits": false,
+        "energy_tariff_rub_kwh": 4.95,
+        "average_salary_rub": 76000,
+        "ecological_class_iza": "Высокий"
+      },
+      "infrastructure": {
+        "has_gas_in_promzone": true,
+        "available_power_kva": 15000,
+        "distance_to_substation_km": 0.7,
+        "connection_cost_rub_kwt": 3800
+      },
+      "social": {
+        "city_environment_index": 217,
+        "kindergarten_occupancy_per_100_kids": 103,
+        "has_profile_colleges": true,
+        "rent_1room_apartment_rub": 27000
+      },
+      "cultural_code": {
+        "architecture_style": "constructivism",
+        "materials": "Крупноразмерные листы с матовым полимерным покрытием цвета «холодная сталь» и яркие сигнальные оранжевые акценты",
+        "color_profile": [
+          "#46484A",
+          "#FF6B35",
+          "#D3D3D3",
+          "#2B2D2F",
+          "#151516"
+        ]
+      },
+      "oez_advantage": "Доступно 15 МВт свободной мощности по первой категории надежности. Наличие собственного таможенного поста на границе парка сокращает время оформления грузов с 3 суток до 4 часов."
+    },
+    {
+      "id": 11,
+      "name": "Калужская область (ОЭЗ ППТ Калуга - Людиново)",
+      "coordinates": {
+        "lat": 53.862175,
+        "lon": 34.542663
+      },
+      "logistics": {
+        "has_railway": true,
+        "distance_to_steel_km": 5,
+        "steel_supplier_name": "АО «Сукремльский чугунолитейный завод»",
+        "distance_to_polyurethane_km": 175,
+        "polyurethane_supplier_name": "ООО ПТК «КРПМС»",
+        "distance_to_highway_km": 0
       },
       "economics": {
         "has_oez_benefits": true,
@@ -45,19 +517,22 @@
           "#2B2D2F",
           "#E9EBEF"
         ]
-      }
+      },
+      "oez_advantage": "Налог на прибыль: 2% первые 5 лет, 7% до 10 лет. Налоги на имущество (10 лет) и землю (5 лет) — 0%. Стоимость техприсоединения к электросетям равна 0 руб. за кВт, что экономит от 15 млн руб."
     },
     {
-      "id": 2,
+      "id": 12,
       "name": "Калужская область (Индустриальный парк Ворсино)",
       "coordinates": {
-        "lat": 55.229358,
-        "lon": 36.682570
+        "lat": 55.229696,
+        "lon": 36.775616
       },
       "logistics": {
         "has_railway": true,
-        "distance_to_steel_km": 110,
-        "distance_to_polyurethane_km": 95,
+        "distance_to_steel_km": 8,
+        "steel_supplier_name": "ООО «НЛМК-Калуга»",
+        "distance_to_polyurethane_km": 110,
+        "polyurethane_supplier_name": "ООО «Химтраст»",
         "distance_to_highway_km": 0
       },
       "economics": {
@@ -92,19 +567,22 @@
           "#3F4245",
           "#E2E5E6"
         ]
-      }
+      },
+      "oez_advantage": "Мультимодальный хаб 'Фрейт Вилладж' в 1 км. Налоговые льготы регионального уровня (налог на прибыль 13.5% вместо 20%). Доступно к подключению до 350 МВт энергии без риска дефицита."
     },
     {
-      "id": 3,
+      "id": 13,
       "name": "Липецкая область (ОЭЗ ППТ Липецк - Грязинская площадка)",
       "coordinates": {
-        "lat": 52.622031,
-        "lon": 38.675743
+        "lat": 52.501933,
+        "lon": 39.761410
       },
       "logistics": {
         "has_railway": true,
-        "distance_to_steel_km": 15,
-        "distance_to_polyurethane_km": 210,
+        "distance_to_steel_km": 30,
+        "steel_supplier_name": "ПАО «Новолипецкий металлургический комбинат»",
+        "distance_to_polyurethane_km": 3,
+        "polyurethane_supplier_name": "ООО Компания «Эгида»",
         "distance_to_highway_km": 2
       },
       "economics": {
@@ -131,26 +609,29 @@
           "techno"
         ],
         "architecture_style": "techno",
-        "materials": "Листовой и рулонный металл во всех проявлениях (сталь, алюминиевые композиты), гладкий шлихованный бетон, панорамное тонированное стекло, элементы из темно-серого гранита.",
+        "materials": "Листовой и рулонный металл во всех проявлениях (сталь, aluminium композиты), гладкий шлихованный бетон, панорамное тонированное стекло, элементы из темно-серого гранита.",
         "color_profile": [
           "#8A9597",
           "#D95D2B",
           "#2B2C2C",
           "#F4F5F6"
         ]
-      }
+      },
+      "oez_advantage": "Налог на прибыль: 2% до 5 лет, 7% до 10 лет. Имущество, земля и транспорт — 0% на 10 лет. Бесплатное подключение к сетям (`connection_cost` = 0) экономит до 50 млн руб. инвестиций."
     },
     {
-      "id": 4,
+      "id": 14,
       "name": "Липецкая область (Индустриальный парк «Кузнецкая слобода»)",
       "coordinates": {
-        "lat": 53.020002,
-        "lon": 39.125772
+        "lat": 53.040305,
+        "lon": 39.119994
       },
       "logistics": {
         "has_railway": true,
-        "distance_to_steel_km": 420,
-        "distance_to_polyurethane_km": 120,
+        "distance_to_steel_km": 25,
+        "steel_supplier_name": "ПАО «Новолипецкий металлургический комбинат»",
+        "distance_to_polyurethane_km": 115,
+        "polyurethane_supplier_name": "ООО «Полиуретан»",
         "distance_to_highway_km": 1
       },
       "economics": {
@@ -185,19 +666,22 @@
           "#E8DCC4",
           "#464A4D"
         ]
-      }
+      },
+      "oez_advantage": "Региональные налоговые субсидии компенсируют до 50% затрат на техприсоединение к сетям (до 14 000 руб./кВт). Готовая сырьевая база: НЛМК находится всего в 25 км."
     },
     {
-      "id": 5,
+      "id": 15,
       "name": "Московская область (ОЭЗ ТВТ Дубна)",
       "coordinates": {
-        "lat": 56.753212,
-        "lon": 37.165298
+        "lat": 56.769192,
+        "lon": 37.158284
       },
       "logistics": {
         "has_railway": false,
-        "distance_to_steel_km": 240,
-        "distance_to_polyurethane_km": 110,
+        "distance_to_steel_km": 280,
+        "steel_supplier_name": "АО «Тулачермет»",
+        "distance_to_polyurethane_km": 5,
+        "polyurethane_supplier_name": "ООО «Пуртис»",
         "distance_to_highway_km": 4
       },
       "economics": {
@@ -224,17 +708,18 @@
           "techno"
         ],
         "architecture_style": "techno",
-        "materials": "Фасадное тонированное стекло, композитные панели под матовый графит и шлихованный титан, светлая штукатурка, элементы из анодированного алюминия.",
+        "materials": "Фасадное тонированное стекло, composite панели под матовый графит и шлихованный титан, светлая штукатурка, элементы из анодированного алюминия.",
         "color_profile": [
           "#2E4057",
           "#F8F9FA",
           "#4E5154",
           "#00A8E8"
         ]
-      }
+      },
+      "oez_advantage": "ОЭЗ ТВТ типа: налог на прибыль снижен до 2% (первые 8 лет), страховые взносы снижены с 30% до 14% для ИТ/R&D отделов. Налоги на имущество и землю — 0% на 10 и 5 лет соответственно."
     },
     {
-      "id": 6,
+      "id": 16,
       "name": "Республика Башкортостан (ОЭЗ ППТ «Алга»)",
       "coordinates": {
         "lat": 53.442979,
@@ -243,7 +728,9 @@
       "logistics": {
         "has_railway": true,
         "distance_to_steel_km": 275,
+        "steel_supplier_name": "ММК (Магнитогорский металлургический комбинат)",
         "distance_to_polyurethane_km": 0,
+        "polyurethane_supplier_name": "ОАО Газпром нефтехим Салават (находится непосредственно на площадке)",
         "distance_to_highway_km": 0
       },
       "economics": {
@@ -278,10 +765,11 @@
           "#2E7D32",
           "#FFC107"
         ]
-      }
+      },
+      "oez_advantage": "Снижение страховых взносов до 7.6% для резидентов. Налог на прибыль: 2% первые 5 лет. Имущественный налог — 0% на 10 лет, земельный — 0% на 5 лет. Экономия на CAPEX за счет дешевого кВт."
     },
     {
-      "id": 7,
+      "id": 17,
       "name": "Республика Башкортостан (Индустриальный парк «Уфимский»)",
       "coordinates": {
         "lat": 54.767633,
@@ -290,7 +778,9 @@
       "logistics": {
         "has_railway": true,
         "distance_to_steel_km": 451,
+        "steel_supplier_name": "ММК (Магнитогорск)",
         "distance_to_polyurethane_km": 343,
+        "polyurethane_supplier_name": "ПАО Уфаоргсинтез / Башнефть",
         "distance_to_highway_km": 0
       },
       "economics": {
@@ -318,17 +808,18 @@
           "eco"
         ],
         "architecture_style": "eco",
-        "materials": "Композитные панели цвета светлого дерева, состаренные металлические профили с патиной, фактурный кирпич ручной формовки тёплых терракотовых оттенков, матовое стекло, крупноформатная керамика цвета «скальный дуб». Декоративные элементы включают лазерную резку по металлу, имитирующую башкирский орнамент.",
+        "materials": "Композитные панели цвета светлого дерева, состаренные металлические профили с патиной, фактурный кирпич ручной формовки тёплых терракотовых оттенков, матового стекло, крупноформатная керамика цвета «скальный дуб». Декоративные элементы включают лазерную резку по металлу, имитирующую башкирский орнамент.",
         "color_profile": [
           "#D2B48C",
           "#8B4513",
           "#556B2F",
           "#CD5C5C"
         ]
-      }
+      },
+      "oez_advantage": "Площадка имеет статус филиала ОЭЗ: сочетает льготу по налогу на прибыль (2%) и рекордно низкую стоимость техприсоединения к подстанции (550 руб./кВт вместо средних 4500 руб.)."
     },
     {
-      "id": 8,
+      "id": 18,
       "name": "Самарская область (ОЭЗ ППТ «Тольятти»)",
       "coordinates": {
         "lat": 53.558155,
@@ -337,7 +828,9 @@
       "logistics": {
         "has_railway": true,
         "distance_to_steel_km": 815,
+        "steel_supplier_name": "ММК (Магнитогорск)",
         "distance_to_polyurethane_km": 389,
+        "polyurethane_supplier_name": "ПАО КуйбышевАзот (Тольятти)",
         "distance_to_highway_km": 3
       },
       "economics": {
@@ -372,10 +865,11 @@
           "#B87333",
           "#2F4F4F"
         ]
-      }
+      },
+      "oez_advantage": "Налог на прибыль: 2% первые 5 лет. Освобождение от налогов на имущество (10 лет), землю (5 лет) и транспорт (10 лет). Снижение затрат на логистику за счет выделенной ж/д ветки внутри ОЭЗ."
     },
     {
-      "id": 9,
+      "id": 19,
       "name": "Самарская область (Индустриальный парк «Преображенка»)",
       "coordinates": {
         "lat": 53.091755,
@@ -384,7 +878,9 @@
       "logistics": {
         "has_railway": true,
         "distance_to_steel_km": 50,
+        "steel_supplier_name": "АО Самарский металлургический завод / НЛМК-Урал",
         "distance_to_polyurethane_km": 30,
+        "polyurethane_supplier_name": "Новокуйбышевский нефтехимический комбинат (ННК)",
         "distance_to_highway_km": 2
       },
       "economics": {
@@ -419,10 +915,11 @@
           "#A8A9AD",
           "#4A5D23"
         ]
-      }
+      },
+      "oez_advantage": "Парк интегрирован со льготами ТОР (Территория опережающего развития): страховые взносы снижены с 30% до 7.6% на 10 лет, налог на прибыль — 5% первые 5 лет."
     },
     {
-      "id": 10,
+      "id": 20,
       "name": "Московская область (Индустриальный парк «Ступино Квадрат»)",
       "coordinates": {
         "lat": 55.004646,
@@ -431,7 +928,9 @@
       "logistics": {
         "has_railway": true,
         "distance_to_steel_km": 330,
+        "steel_supplier_name": "НЛМК (Липецк)",
         "distance_to_polyurethane_km": 93,
+        "polyurethane_supplier_name": "Химбазы Ступино / Дау Изолан (Владимир)",
         "distance_to_highway_km": 5
       },
       "economics": {
@@ -466,7 +965,8 @@
           "#9B2C1C",
           "#D2B48C"
         ]
-      }
+      },
+      "oez_advantage": "Единственный частный ИП в РФ со статусом ОЭЗ ППТ. Налог на прибыль 2%, налог на имущество и землю — 0%. Готовая ж/д ветка заведена внутрь парка, примыкание к Павелецкому направлению."
     }
   ]
 }
