@@ -63,35 +63,10 @@
       <button id="focus-factory">Фокус: Завод</button>
       <button id="focus-city">Фокус: Город</button>
     </div>
-    <div class="row">
-      <div>Качество</div>
-      <button id="toggle-post">PostFX: On</button>
-    </div>
-    <div class="stack">
-      <div class="coords">
-        <strong>ЛКМ по земле:</strong> ставит точку и выводит координаты X/Z.
-        <div id="picked-coords">Последняя точка: ещё не выбрана</div>
-      </div>
-      <div class="coord-list" id="picked-list">История точек: пусто</div>
-    </div>
-    <div id="hint">
-      Управление: <code>ЛКМ</code> выбрать точку, <code>ПКМ</code> орбита, <code>колесо</code> зум. <br/>
-      Подсказка: включи ночь — увидишь фонари, окна, неон и Bloom.
-    </div>
   </div>
   <div id="three-container"></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/math/SimplexNoise.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/SSAOShader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/SSAOPass.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/ConvolutionShader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
   <script>
     // ---------------------------
     // DATA
@@ -145,34 +120,10 @@
     scene.background = new THREE.Color(0xa9d7ff);
     scene.fog = new THREE.FogExp2(0xa9d7ff, 0.00125);
     // ---------------------------
-    // PostFX: SSAO + Bloom (toggleable)
+    // Render without post-processing
     // ---------------------------
     let composer = null;
-    let usePost = true;
-    function buildComposer() {
-      composer = new THREE.EffectComposer(renderer);
-      composer.addPass(new THREE.RenderPass(scene, camera));
-      // SSAO for depth contact shadows feel
-      const ssao = new THREE.SSAOPass(scene, camera, window.innerWidth, window.innerHeight);
-      ssao.kernelRadius = 16;
-      ssao.minDistance = 0.003;
-      ssao.maxDistance = 0.12;
-      ssao.output = THREE.SSAOPass.OUTPUT.Default;
-      composer.addPass(ssao);
-      // Bloom for emissive lights and windows at night
-      const bloom = new THREE.UnrealBloomPass(
-        new THREE.Vector2(window.innerWidth, window.innerHeight),
-        0.75,  // strength
-        0.55,  // radius
-        0.85   // threshold
-      );
-      composer.addPass(bloom);
-      // copy to screen
-      const copy = new THREE.ShaderPass(THREE.CopyShader);
-      copy.renderToScreen = true;
-      composer.addPass(copy);
-    }
-    buildComposer();
+    let usePost = false;
     // ---------------------------
     // Utility: seeded random for repeatability
     // ---------------------------
@@ -284,77 +235,6 @@ grassMap.anisotropy = 2;
     ground.position.y = -0.5;
     ground.receiveShadow = true;
     scene.add(ground);
-    const raycaster = new THREE.Raycaster();
-    const pointer = new THREE.Vector2();
-    const pickedPoints = [];
-    const pickedMarkers = new THREE.Group();
-    scene.add(pickedMarkers);
-    const pickedCoordsEl = document.getElementById('picked-coords');
-    const pickedListEl = document.getElementById('picked-list');
-    window.__pickedGroundPoints = pickedPoints;
-    window.__lastGroundPoint = null;
-
-    function formatPickPoint(point) {
-      const x = Number(point.x).toFixed(2);
-      const z = Number(point.z).toFixed(2);
-      return `X: ${x} м, Z: ${z} м`;
-    }
-
-    function renderPickedList() {
-      if (!pickedPoints.length) {
-        pickedListEl.textContent = 'История точек: пусто';
-        return;
-      }
-      pickedListEl.innerHTML = pickedPoints
-        .slice(0, 8)
-        .map((item, index) => `<div>${index + 1}. ${formatPickPoint(item.point)}</div>`)
-        .join('');
-    }
-
-    function addPickMarker(point) {
-      const marker = new THREE.Group();
-      const pillar = new THREE.Mesh(
-        cylinderGeo(0.18, 0.18, 2.2, 12),
-        new THREE.MeshStandardMaterial({ color: 0xffd34d, emissive: 0xffb300, emissiveIntensity: 0.8, roughness: 0.35 })
-      );
-      pillar.position.y = 1.1;
-      const head = new THREE.Mesh(
-        new THREE.SphereGeometry(0.42, 16, 12),
-        new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x00d9ff, emissiveIntensity: 1.3, roughness: 0.15 })
-      );
-      head.position.y = 2.35;
-      marker.add(pillar, head);
-      marker.position.copy(point);
-      marker.position.y = 0.02;
-      pickedMarkers.add(marker);
-      const light = new THREE.PointLight(0x8bdfff, 1.2, 30, 2);
-      light.position.copy(point);
-      light.position.y = 5;
-      scene.add(light);
-      nightLights.push({ type: 'point', light, onIntensity: 1.2 });
-    }
-
-    function pickGround(clientX, clientY) {
-      const rect = renderer.domElement.getBoundingClientRect();
-      pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-      pointer.y = -(((clientY - rect.top) / rect.height) * 2 - 1);
-      raycaster.setFromCamera(pointer, camera);
-      const hits = raycaster.intersectObject(ground, false);
-      if (!hits.length) {
-        return;
-      }
-      const hit = hits[0].point.clone();
-      const label = formatPickPoint(hit);
-      pickedPoints.unshift({ point: hit, label });
-      if (pickedPoints.length > 12) {
-        pickedPoints.length = 12;
-      }
-      window.__lastGroundPoint = { x: hit.x, y: hit.y, z: hit.z };
-      pickedCoordsEl.textContent = `Последняя точка: ${label}`;
-      renderPickedList();
-      addPickMarker(hit);
-      console.log('[ground-pick]', label);
-    }
     function addPlane(w,l, mat, x,z, y=0.02, rot=0) {
       // If material looks like road/asphalt or road shoulder, use a thin box instead of a plane
       let isRoad = false;
@@ -1519,7 +1399,6 @@ grassMap.anisotropy = 2;
     const btnTime = document.getElementById('toggle-time');
     const btnFactory = document.getElementById('focus-factory');
     const btnCity = document.getElementById('focus-city');
-    const btnPost = document.getElementById('toggle-post');
     btnTime.addEventListener('click', ()=>{
       setNight(!isNight);
       btnTime.textContent = isNight ? 'Ночь' : 'День';
@@ -1529,31 +1408,6 @@ grassMap.anisotropy = 2;
     });
     btnCity.addEventListener('click', ()=>{
       focusOn(new THREE.Vector3(-950, 10, 240));
-    });
-    btnPost.addEventListener('click', ()=>{
-      usePost = !usePost;
-      btnPost.textContent = usePost ? 'PostFX: On' : 'PostFX: Off';
-    });
-    let pointerDownState = null;
-    renderer.domElement.style.touchAction = 'none';
-    renderer.domElement.addEventListener('pointerdown', (event) => {
-      if (event.button !== 0) {
-        pointerDownState = null;
-        return;
-      }
-      pointerDownState = { x: event.clientX, y: event.clientY, time: performance.now() };
-    });
-    renderer.domElement.addEventListener('pointerup', (event) => {
-      if (event.button !== 0 || !pointerDownState) {
-        pointerDownState = null;
-        return;
-      }
-      const distance = Math.hypot(event.clientX - pointerDownState.x, event.clientY - pointerDownState.y);
-      pointerDownState = null;
-      if (distance > 7) {
-        return;
-      }
-      pickGround(event.clientX, event.clientY);
     });
     ['mousedown','wheel','touchstart'].forEach(e => container.addEventListener(e, () => intro = false));
     // ---------------------------
