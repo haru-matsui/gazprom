@@ -22,6 +22,34 @@ from pypdf import PdfReader, PdfWriter
 load_dotenv()
 
 
+def render_score_formula(score_data, expanded=False):
+    formula = score_data.get("score_formula")
+    breakdown = score_data.get("score_breakdown", [])
+    if not formula and not breakdown:
+        return
+    with st.expander("Как сформирован рейтинг", expanded=expanded):
+        if formula:
+            st.code(formula, language="text")
+        if breakdown:
+            for item in breakdown:
+                if item.get("normalized") is not None:
+                    st.write(f"- **{item['label']}**: {item['value']}")
+                    st.write(
+                        f"  - Диапазон по всем регионам: {item['min']} .. {item['max']}"
+                    )
+                    st.write(
+                        f"  - Формула нормализации: {item['normalization_formula']} = {item['normalized']}"
+                    )
+                    st.write(
+                        f"  - Вклад в рейтинг: {item['normalized']} × {item['weight']} = {item['contribution']}"
+                    )
+                else:
+                    explanation = item.get("explanation")
+                    st.write(f"- **{item['label']}**: {item['value']} → {item['contribution']}")
+                    if explanation:
+                        st.write(f"  - {explanation}")
+
+
 def _safe_filename(value, fallback="presentation"):
         cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", str(value)).strip()
         cleaned = re.sub(r"\s+", " ", cleaned)
@@ -46,7 +74,9 @@ def build_presentation_document(slide_css, slides_html, reset_script=""):
             }}
             .presentation-wrapper {{
                 display: block !important;
-                height: auto !important;
+                if i == 0:
+                    st.info("Ниже показано, как именно сложился рейтинг этого региона.")
+                render_score_formula(r)
                 overflow: visible !important;
                 gap: 0 !important;
                 padding: 0 !important;
@@ -447,6 +477,7 @@ if st.session_state.get("calculated", False):
             ).add_to(m)
             with tabs[i]:
                 st.subheader(f"Итоговый рейтинг: {r['score']}")
+                render_score_formula(r, expanded=False)
                 col_a, col_b = st.columns(2)
                 with col_a:
                     st.markdown("#### Социальный паспорт региона")
@@ -502,9 +533,58 @@ if st.session_state.get("calculated", False):
                     st.write(f"- **Площадь жилья:** {est['housing_area']:,} м²")
                     st.write(f"- **Площадь детского сада:** {est['kindergarten_area']:,} м²")
                     st.write("---")
-                    st.write(f"- **CAPEX проекта:** {est['capex']:,} руб")
-                    st.write(f"- **Годовой OPEX:** {est['opex']:,} руб/год")
-                    st.markdown(f"**ИТОГОВАЯ СМЕТА ПРОЕКТА:** :green[**{est['total_cost']:,} руб**]")
+                    
+                # Полные таблицы CAPEX и OPEX на всю ширину
+                capex_bd = est.get('capex_breakdown', [])
+                opex_bd = est.get('opex_breakdown', {})
+
+                capex_rows = []
+                for group in capex_bd:
+                    for it in group.get('items', []):
+                        capex_rows.append({
+                            "Группа": group.get('group', ''),
+                            "Статья": it.get('name', ''),
+                            "Сумма, руб": f"{it.get('amount', 0):,}"
+                        })
+
+                opex_rows = []
+                for it in opex_bd.get('items', []):
+                    opex_rows.append({
+                        "Статья": it.get('name', ''),
+                        "Сумма, руб/год": f"{it.get('amount', 0):,}"
+                    })
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("### Детализация CAPEX")
+                    if capex_rows:
+                        st.table(capex_rows)
+                        st.markdown("**Итоги по группам:**")
+                        for group in capex_bd:
+                            st.write(f"- {group.get('group')}: {group.get('total', 0):,} руб")
+                        st.write(f"**Итого CAPEX:** {est.get('capex', 0):,} руб")
+                        # Серый разделитель только на левой половине страницы
+                        div_left, div_right = st.columns([1, 1])
+                        with div_left:
+                            st.markdown('<div style="height:1px;background:#d0d0d0;margin:12px 0;width:100%;"></div>', unsafe_allow_html=True)
+                        with div_right:
+                            st.markdown('')
+                    else:
+                        st.write("Нет данных по CAPEX")
+
+                with col2:
+                    st.markdown("### Детализация OPEX")
+                    if opex_rows:
+                        st.table(opex_rows)
+                        st.write(f"**Итого OPEX:** {opex_bd.get('total', 0):,} руб/год")
+                    else:
+                        st.write("Нет данных по OPEX")
+
+                # Перенесённые сводные показатели под таблицы
+                st.write(f"- **CAPEX проекта:** {est.get('capex', 0):,} руб")
+                st.write(f"- **Годовой OPEX:** {est.get('opex', 0):,} руб/год")
+                st.markdown(f"**ИТОГОВАЯ СМЕТА ПРОЕКТА:** :green[**{est.get('total_cost', 0):,} руб**]")
+
                 st.markdown("---")
                 st.markdown("### Интерактивная 3D-визуализация площадки (Three.js)")
                 st.write("Интерактивная трехмерная схема генерального плана на основе ваших параметров.")
