@@ -4,11 +4,14 @@ import folium
 from streamlit_folium import st_folium
 import base64
 from io import BytesIO
+import time
 from PIL import Image
 import json
 import streamlit.components.v1 as components
 import os
 import re
+import random
+from pathlib import Path
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
 from pptx import Presentation
@@ -253,6 +256,91 @@ def generate_concept_board_openrouter(region_name, cultural_code):
     else:
         st.error(f"Ошибка API: {response.status_code} - {response.text}")
     return None
+
+
+def load_factory_collage_image(max_attempts=12, delay_seconds=0.25):
+    collage_url = "http://localhost:8000/renders/factory_collage.png"
+    for _ in range(max_attempts):
+        try:
+            response = requests.get(collage_url, timeout=3)
+            if response.status_code == 200 and response.content:
+                return Image.open(BytesIO(response.content))
+        except Exception:
+            pass
+        time.sleep(delay_seconds)
+    return None
+
+
+def generate_collage_from_scene(three_js_data, viewpoints=None, out_dir="renders"):
+    """
+    Делает 4 снимка сцены из `three_scene.html` по заданным точкам на земле.
+    Если точки не переданы, используются координаты, которые прислал пользователь.
+    """
+    viewpoints = viewpoints or [
+        {"x": -60, "z": -10},
+        {"x": 560, "z": -10},
+        {"x": 250, "z": -280},
+        {"x": 250, "z": 260},
+    ]
+
+    saved_paths = []
+    out_path = Path(out_dir)
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1200, "height": 800}, device_scale_factor=1)
+            try:
+                with open("three_scene.html", "r", encoding="utf-8") as f:
+                    html_template = f.read()
+            except FileNotFoundError:
+                browser.close()
+                return []
+
+            html = html_template.replace("__DATA_PLACEHOLDER__", json.dumps(three_js_data))
+            page.set_content(html, wait_until="networkidle")
+            page.emulate_media(media="screen")
+            page.wait_for_function("window.__threeSceneReady === true", timeout=30000)
+            out_path.mkdir(exist_ok=True)
+
+            for old_file in out_path.glob("factory_view_*.png"):
+                try:
+                    old_file.unlink()
+                except OSError:
+                    pass
+
+            raw_points = [{"x": float(v.get("x", 0.0)), "z": float(v.get("z", 0.0))} for v in viewpoints[:4]]
+            data_urls = page.evaluate("points => window.captureFactoryShotsFromPoints(points)", raw_points)
+            if isinstance(data_urls, str):
+                data_urls = [data_urls]
+
+            for idx, data_url in enumerate(data_urls[:4], start=1):
+                if "," in data_url:
+                    _, encoded = data_url.split(",", 1)
+                else:
+                    encoded = data_url
+                file_path = out_path / f"factory_view_{idx}.png"
+                file_path.write_bytes(base64.b64decode(encoded))
+                saved_paths.append(str(file_path))
+
+            if saved_paths:
+                try:
+                    collage_size = 1536
+                    thumb_size = collage_size // 2
+                    positions = [(0, 0), (thumb_size, 0), (0, thumb_size), (thumb_size, thumb_size)]
+                    collage = Image.new("RGB", (collage_size, collage_size), "white")
+                    for idx, image_path in enumerate(saved_paths[:4]):
+                        with Image.open(image_path) as source:
+                            frame = source.convert("RGB").resize((thumb_size, thumb_size), Image.Resampling.LANCZOS)
+                            collage.paste(frame, positions[idx])
+                    collage.save(out_path / "factory_collage.png", format="PNG")
+                except Exception:
+                    pass
+
+            browser.close()
+        return saved_paths
+    except Exception:
+        return []
 st.set_page_config(page_title="Подбор локации", layout="wide")
 st.title("Выбор оптимального региона для строительства")
 st.markdown("Внесите требуемые параметры для скоринга:")
@@ -264,6 +352,8 @@ if "3d_screenshots" not in st.session_state:
     st.session_state["3d_screenshots"] = {} # Перевели в словарь по индексу вкладки
 if "final_renders" not in st.session_state:
     st.session_state["final_renders"] = {} # Перевели в словарь по индексу вкладки
+if "factory_collage" not in st.session_state:
+    st.session_state["factory_collage"] = None
 col1, col2 = st.columns(2)
 with col1:
     st.subheader("1. Производство и Экономика")
@@ -310,11 +400,8 @@ if st.button("Рассчитать оптимальные регионы", type=
     with st.spinner("Анализ данных..."):
         try:
             response = requests.post("http://localhost:8000/api/score", json=payload)
-            response.raise_for_status()
-            data = response.json()
-            st.session_state["top_regions"] = data.get("top_regions", [])
-            st.session_state["payload"] = payload
             st.session_state["calculated"] = True
+            st.session_state["top_regions"] = response.json().get("top_regions", [])
         except Exception as e:
             st.error(f"Ошибка при подключении к backend: {e}")
 if st.session_state.get("calculated", False):
@@ -373,6 +460,10 @@ if st.session_state.get("calculated", False):
                     st.markdown("#### Экономический блок")
                     st.write(
                         f"- **Налоговые льготы:** {'Есть' if region_data['economics']['has_oez_benefits'] else 'Нет'}")
+                    # Показываем краткое описание преимуществ ОЭЗ/региона рядом с льготами
+                    oez_adv = region_data.get('oez_advantage') or region_data.get('economics', {}).get('oez_advantage')
+                    if oez_adv:
+                        st.write(f"- **Преимущества региона / ОЭЗ:** {oez_adv}")
                     st.write(f"- **Энерготариф:** {region_data['economics']['energy_tariff_rub_kwh']} руб/кВт·ч")
                     st.write(f"- **Средняя зарплата:** {region_data['economics']['average_salary_rub']} руб/мес")
                     st.markdown("#### Рекомендации по удержанию персонала")
@@ -396,8 +487,14 @@ if st.session_state.get("calculated", False):
                     st.markdown("#### Логистика сырья")
                     st.write(
                         f"- **Расстояние до поставщика стали:** {region_data['logistics']['distance_to_steel_km']} км")
+                    steel_name = region_data['logistics'].get('steel_supplier_name')
+                    if steel_name:
+                        st.write(f"  - Поставщик: {steel_name}")
                     st.write(
                         f"- **Расстояние до поставщика утеплителя:** {region_data['logistics']['distance_to_polyurethane_km']} км")
+                    poly_name = region_data['logistics'].get('polyurethane_supplier_name')
+                    if poly_name:
+                        st.write(f"  - Поставщик: {poly_name}")
                     st.markdown("#### Предварительная смета строительства")
                     st.write(f"- **Площадь производственного цеха:** {est['shop_area']:,} м²")
                     st.write(f"- **Площадь склада:** {est['warehouse_area']:,} м²")
@@ -414,6 +511,7 @@ if st.session_state.get("calculated", False):
                 current_cultural_code = region_data.get('cultural_code', {})
                 colors_from_code = current_cultural_code.get('color_profile', ["#555555", "#999999", "#cccccc"])
                 three_js_data = {
+                    "production_volume": production_volume,
                     "shop_area": est['shop_area'],
                     "warehouse_area": est['warehouse_area'],
                     "abk_area": est['abk_area'],
@@ -426,10 +524,36 @@ if st.session_state.get("calculated", False):
                 try:
                     with open("three_scene.html", "r", encoding="utf-8") as f:
                         html_template = f.read()
-                    runtime_html = html_template.replace("__DATA_PLACEHOLDER__", json.dumps(three_js_data))
-                    components.html(runtime_html, height=550, scrolling=False)
+                    runtime_html_base = html_template.replace("__DATA_PLACEHOLDER__", json.dumps(three_js_data))
+                    # site-only: button to (re)generate collage by reloading the embedded scene
                 except FileNotFoundError:
                     st.error("Не удалось найти файл шаблона сцены `three_scene.html` в папке проекта.")
+                generate_pressed = st.button("Сгенерировать коллаж", key=f"generate_collage_{i}")
+                if generate_pressed:
+                    # clear cached preview
+                    st.session_state["factory_collage"] = None
+                    with st.spinner("Сохраняем скриншоты локально..."):
+                        try:
+                            saved = generate_collage_from_scene(three_js_data)
+                            st.session_state["factory_collage_paths"] = saved
+                            if saved:
+                                st.success(f"Сохранено {len(saved)} изображений в папке renders/")
+                                try:
+                                    st.image(saved[0], caption=os.path.basename(saved[0]), width=760)
+                                except Exception:
+                                    pass
+                            else:
+                                st.error("Не удалось сохранить скриншоты. Проверьте three_scene.html и логи Playwright.")
+                        except Exception as e:
+                            st.error(f"Ошибка сохранения скринов: {e}")
+                components.html(runtime_html_base, height=550, scrolling=False)
+                st.markdown("#### Коллаж завода")
+                if st.session_state["factory_collage"] is None:
+                    st.session_state["factory_collage"] = load_factory_collage_image()
+                if st.session_state["factory_collage"] is not None:
+                    st.image(st.session_state["factory_collage"], caption="Собранный коллаж завода", width=760)
+                else:
+                    st.info("Коллаж ещё сохраняется. Подождите секунду и обновите страницу.")
                 st.markdown("---")
                 st.markdown("#### Архитектурный концепт-борд (AI Генерация)")
                 st.write(

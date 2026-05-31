@@ -3,6 +3,7 @@ example.json
 gpt.py
 run.txt
 67gazan.json
+new_db.json
 
 # Среда разработки
 .vscode/
