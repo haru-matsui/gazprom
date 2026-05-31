@@ -32,7 +32,7 @@
         "city_environment_index": 225,
         "kindergarten_occupancy_per_100_kids": 92,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 28000
+        "rent_1room_apartment_rub": 26420
       },
       "cultural_code": {
         "architecture_style": "eco-tech",
@@ -65,7 +65,7 @@
       "economics": {
         "has_oez_benefits": false,
         "has_insurance_benefits": false,
-        "energy_tariff_rub_kwh": 6.40,
+        "energy_tariff_rub_kwh": 6.4,
         "average_salary_rub": 54000,
         "ecological_class_iza": "Низкий"
       },
@@ -79,7 +79,7 @@
         "city_environment_index": 198,
         "kindergarten_occupancy_per_100_kids": 98,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 18000
+        "rent_1room_apartment_rub": 26420
       },
       "cultural_code": {
         "architecture_style": "industrial",
@@ -126,7 +126,7 @@
         "city_environment_index": 195,
         "kindergarten_occupancy_per_100_kids": 102,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 17000
+        "rent_1room_apartment_rub": 26968
       },
       "cultural_code": {
         "architecture_style": "brutalism",
@@ -159,7 +159,7 @@
       "economics": {
         "has_oez_benefits": false,
         "has_insurance_benefits": false,
-        "energy_tariff_rub_kwh": 5.90,
+        "energy_tariff_rub_kwh": 5.9,
         "average_salary_rub": 62000,
         "ecological_class_iza": "Низкий"
       },
@@ -173,7 +173,7 @@
         "city_environment_index": 204,
         "kindergarten_occupancy_per_100_kids": 96,
         "has_profile_colleges": false,
-        "rent_1room_apartment_rub": 20000
+        "rent_1room_apartment_rub": 26968
       },
       "cultural_code": {
         "architecture_style": "modernism",
@@ -220,7 +220,7 @@
         "city_environment_index": 182,
         "kindergarten_occupancy_per_100_kids": 108,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 14000
+        "rent_1room_apartment_rub": 30492
       },
       "cultural_code": {
         "architecture_style": "constructivism",
@@ -253,7 +253,7 @@
       "economics": {
         "has_oez_benefits": false,
         "has_insurance_benefits": false,
-        "energy_tariff_rub_kwh": 5.40,
+        "energy_tariff_rub_kwh": 5.4,
         "average_salary_rub": 83000,
         "ecological_class_iza": "Высокий"
       },
@@ -267,7 +267,7 @@
         "city_environment_index": 214,
         "kindergarten_occupancy_per_100_kids": 104,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 28000
+        "rent_1room_apartment_rub": 30492
       },
       "cultural_code": {
         "architecture_style": "high-tech",
@@ -314,7 +314,7 @@
         "city_environment_index": 218,
         "kindergarten_occupancy_per_100_kids": 95,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 16000
+        "rent_1room_apartment_rub": 28285
       },
       "cultural_code": {
         "architecture_style": "futurism",
@@ -347,7 +347,7 @@
       "economics": {
         "has_oez_benefits": false,
         "has_insurance_benefits": false,
-        "energy_tariff_rub_kwh": 4.60,
+        "energy_tariff_rub_kwh": 4.6,
         "average_salary_rub": 74000,
         "ecological_class_iza": "Низкий"
       },
@@ -361,7 +361,7 @@
         "city_environment_index": 222,
         "kindergarten_occupancy_per_100_kids": 97,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 25000
+        "rent_1room_apartment_rub": 28285
       },
       "cultural_code": {
         "architecture_style": "eco-urbanism",
@@ -394,7 +394,7 @@
       "economics": {
         "has_oez_benefits": false,
         "has_insurance_benefits": false,
-        "energy_tariff_rub_kwh": 5.10,
+        "energy_tariff_rub_kwh": 5.1,
         "average_salary_rub": 69000,
         "ecological_class_iza": "Повышенный"
       },
@@ -408,7 +408,7 @@
         "city_environment_index": 192,
         "kindergarten_occupancy_per_100_kids": 101,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 22000
+        "rent_1room_apartment_rub": 25859
       },
       "cultural_code": {
         "architecture_style": "functionalism",
@@ -455,7 +455,7 @@
         "city_environment_index": 217,
         "kindergarten_occupancy_per_100_kids": 103,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 27000
+        "rent_1room_apartment_rub": 25859
       },
       "cultural_code": {
         "architecture_style": "constructivism",
@@ -502,7 +502,7 @@
         "city_environment_index": 172,
         "kindergarten_occupancy_per_100_kids": 118,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 15000
+        "rent_1room_apartment_rub": 24036
       },
       "cultural_code": {
         "scoring_style_tags": [
@@ -552,7 +552,7 @@
         "city_environment_index": 241,
         "kindergarten_occupancy_per_100_kids": 100,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 25000
+        "rent_1room_apartment_rub": 24036
       },
       "cultural_code": {
         "scoring_style_tags": [
@@ -575,7 +575,7 @@
       "name": "Липецкая область (ОЭЗ ППТ Липецк - Грязинская площадка)",
       "coordinates": {
         "lat": 52.501933,
-        "lon": 39.761410
+        "lon": 39.76141
       },
       "logistics": {
         "has_railway": true,
@@ -602,7 +602,7 @@
         "city_environment_index": 226,
         "kindergarten_occupancy_per_100_kids": 114,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 18000
+        "rent_1room_apartment_rub": 21187
       },
       "cultural_code": {
         "scoring_style_tags": [
@@ -637,7 +637,7 @@
       "economics": {
         "has_oez_benefits": true,
         "has_insurance_benefits": true,
-        "energy_tariff_rub_kwh": 4.80,
+        "energy_tariff_rub_kwh": 4.8,
         "average_salary_rub": 58600,
         "ecological_class_iza": "Низкий"
       },
@@ -651,7 +651,7 @@
         "city_environment_index": 214,
         "kindergarten_occupancy_per_100_kids": 105,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 12000
+        "rent_1room_apartment_rub": 21187
       },
       "cultural_code": {
         "scoring_style_tags": [
@@ -701,7 +701,7 @@
         "city_environment_index": 247,
         "kindergarten_occupancy_per_100_kids": 102,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 28000
+        "rent_1room_apartment_rub": 56273
       },
       "cultural_code": {
         "scoring_style_tags": [
@@ -750,7 +750,7 @@
         "city_environment_index": 251,
         "kindergarten_occupancy_per_100_kids": 100,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 24900
+        "rent_1room_apartment_rub": 24320
       },
       "cultural_code": {
         "scoring_style_tags": [
@@ -800,7 +800,7 @@
         "city_environment_index": 251,
         "kindergarten_occupancy_per_100_kids": 92,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 24900
+        "rent_1room_apartment_rub": 24320
       },
       "cultural_code": {
         "scoring_style_tags": [
@@ -850,7 +850,7 @@
         "city_environment_index": 227,
         "kindergarten_occupancy_per_100_kids": 85,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 17000
+        "rent_1room_apartment_rub": 26871
       },
       "cultural_code": {
         "scoring_style_tags": [
@@ -900,7 +900,7 @@
         "city_environment_index": 210,
         "kindergarten_occupancy_per_100_kids": 63,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 25000
+        "rent_1room_apartment_rub": 26871
       },
       "cultural_code": {
         "scoring_style_tags": [
@@ -950,7 +950,7 @@
         "city_environment_index": 210,
         "kindergarten_occupancy_per_100_kids": 95,
         "has_profile_colleges": true,
-        "rent_1room_apartment_rub": 25000
+        "rent_1room_apartment_rub": 56273
       },
       "cultural_code": {
         "scoring_style_tags": [
