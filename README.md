@@ -9,6 +9,17 @@
 cp template.env .env
 ```
 
+## зависимости
+
+
+```bash
+pip install -r requirementx
+```
+
+```bash
+playwright install
+```
+
 ## Запуск
 
 ### Backend
