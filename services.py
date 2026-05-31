@@ -38,7 +38,8 @@ def calculate_estimate(region, user_input, required_power):
     elif "Башкортостан" in name: regional_coef = 1.08
     elif "Липецкая" in name: regional_coef = 0.95
     elif "Калужская" in name: regional_coef = 1.03
-    production_cost = (shop_area + warehouse_area) * 32000 * regional_coef
+    shop_cost = shop_area * 32000 * regional_coef
+    warehouse_cost = warehouse_area * 32000 * regional_coef
     abk_cost = abk_area * 52000 * regional_coef
     housing_cost = housing_area * housing_cost_per_m2 * regional_coef
     kindergarten_cost = kindergarten_area * 50000 * regional_coef
@@ -56,7 +57,7 @@ def calculate_estimate(region, user_input, required_power):
     }
     sports_cost = sum([sports_prices.get(i, 0) for i in user_input["sports"]])
     connection_cost = required_power * infra["connection_cost_rub_kwt"]
-    capex = (production_cost + abk_cost + housing_cost + kindergarten_cost + landscaping_cost + sports_cost + connection_cost)
+    capex = (shop_cost + warehouse_cost + abk_cost + housing_cost + kindergarten_cost + landscaping_cost + sports_cost + connection_cost)
     steel_mass = production_m2 * 0.012
     poly_mass = production_m2 * 0.003
     logistics_tariff = 15
@@ -67,6 +68,55 @@ def calculate_estimate(region, user_input, required_power):
     ecology_cost = 10_000_000
     opex = steel_cost + poly_cost + salary_cost + energy_cost + ecology_cost
     total_cost = capex + opex
+
+    # CapEx breakdown by groups and buildings
+    capex_breakdown = [
+        {
+            "group": "Производственные помещения",
+            "items": [
+                {"name": "Цех", "amount": round(shop_cost)},
+                {"name": "Склад", "amount": round(warehouse_cost)},
+            ],
+            "total": round(shop_cost + warehouse_cost)
+        },
+        {
+            "group": "Административно-бытовой корпус (АБК)",
+            "items": [
+                {"name": "АБК", "amount": round(abk_cost)},
+            ],
+            "total": round(abk_cost)
+        },
+        {
+            "group": "Социальная инфраструктура",
+            "items": [
+                {"name": "Жилые площади (корпоративное жильё)", "amount": round(housing_cost)},
+                {"name": "Детский сад", "amount": round(kindergarten_cost)},
+                {"name": "Благоустройство / ландшафт", "amount": round(landscaping_cost)},
+                {"name": "Спортивные объекты", "amount": round(sports_cost)},
+            ],
+            "total": round(housing_cost + kindergarten_cost + landscaping_cost + sports_cost)
+        },
+        {
+            "group": "Инженерные подключения и сеть",
+            "items": [
+                {"name": "Подключение мощности", "amount": round(connection_cost)},
+            ],
+            "total": round(connection_cost)
+        }
+    ]
+
+    # OpEx breakdown (годовые или ориентировочные)
+    opex_breakdown = {
+        "items": [
+            {"name": "Сталь (логистика)", "amount": round(steel_cost)},
+            {"name": "Полиуретан (логистика)", "amount": round(poly_cost)},
+            {"name": "Зарплатный фонд (годовой)", "amount": round(salary_cost)},
+            {"name": "Энергия (годовой)", "amount": round(energy_cost)},
+            {"name": "Экология / прочие", "amount": round(ecology_cost)},
+        ],
+        "total": round(opex)
+    }
+
     return {
         "shop_area": round(shop_area),
         "warehouse_area": round(warehouse_area),
@@ -75,7 +125,37 @@ def calculate_estimate(region, user_input, required_power):
         "kindergarten_area": round(kindergarten_area),
         "capex": round(capex),
         "opex": round(opex),
-        "total_cost": round(total_cost)
+        "total_cost": round(total_cost),
+        "capex_breakdown": capex_breakdown,
+        "opex_breakdown": opex_breakdown
+    }
+def _build_score_term(label, raw_value, values, weight, mode, value_text, value_unit=""):
+    min_v = min(values)
+    max_v = max(values)
+    if max_v == min_v:
+        normalized = 1
+        formula = f"Так как min = max = {min_v}, нормализация = 1"
+    elif mode == "inverse":
+        normalized = (max_v - raw_value) / (max_v - min_v)
+        formula = f"({max_v} - {raw_value}) / ({max_v} - {min_v})"
+    else:
+        normalized = (raw_value - min_v) / (max_v - min_v)
+        formula = f"({raw_value} - {min_v}) / ({max_v} - {min_v})"
+
+    normalized = max(0, min(normalized, 1))
+    contribution = normalized * weight
+    return {
+        "label": label,
+        "value": value_text,
+        "raw_value": raw_value,
+        "raw_unit": value_unit,
+        "min": min_v,
+        "max": max_v,
+        "mode": mode,
+        "normalized": round(normalized, 3),
+        "weight": weight,
+        "contribution": round(contribution, 2),
+        "normalization_formula": formula,
     }
 def run_scoring_algorithm(user_input_dict: dict, regions: list):
     required_power = user_input_dict["production_volume"] * 1.8
@@ -91,16 +171,6 @@ def run_scoring_algorithm(user_input_dict: dict, regions: list):
         "steel": 20, "poly": 20, "salary": 15, "energy": 15,
         "environment": 15, "rent": 10, "power": 15
     }
-    architecture = user_input_dict["architecture_priority"]
-    if architecture == "Экодизайн":
-        weights["environment"] += 20
-        weights["energy"] += 10
-    elif architecture == "Техно-стиль":
-        weights["power"] += 25
-        weights["energy"] += 10
-    elif architecture == "Аутентичность региону":
-        weights["environment"] += 10
-        weights["salary"] += 10
     housing_percent = user_input_dict["housing"]["percent"]
     if housing_percent >= 70:
         weights["rent"] += 15
@@ -128,27 +198,140 @@ def run_scoring_algorithm(user_input_dict: dict, regions: list):
         estimate = calculate_estimate(region, user_input_dict, required_power)
         if estimate["capex"] > budget_rub:
             continue
+        score_terms = []
         score = 0
-        score += normalize_inverse(logistics["distance_to_steel_km"], steel_values) * weights["steel"]
-        score += normalize_inverse(logistics["distance_to_polyurethane_km"], poly_values) * weights["poly"]
-        score += normalize_inverse(econ["energy_tariff_rub_kwh"], energy_values) * weights["energy"]
-        score += normalize_direct(infra["available_power_kva"], power_values) * weights["power"]
-        score += normalize_inverse(econ["average_salary_rub"], salary_values) * weights["salary"]
-        score += normalize_inverse(social["rent_1room_apartment_rub"], rent_values) * weights["rent"]
-        score += normalize_direct(social["city_environment_index"], env_values) * weights["environment"]
-        if econ["has_oez_benefits"]: score += 5
-        if econ["has_insurance_benefits"]: score += 3
-        if logistics["has_railway"]: score += 2
-        if logistics["distance_to_highway_km"] > 5:
-            score -= 5
-        if econ["average_salary_rub"] > 100000:
-            score -= 5
+
+        steel_term = _build_score_term(
+            "Расстояние до стали",
+            logistics["distance_to_steel_km"],
+            steel_values,
+            weights["steel"],
+            "inverse",
+            f"{logistics['distance_to_steel_km']} км",
+            "км",
+        )
+        score += steel_term["contribution"]
+        score_terms.append(steel_term)
+
+        poly_term = _build_score_term(
+            "Расстояние до полиуретана",
+            logistics["distance_to_polyurethane_km"],
+            poly_values,
+            weights["poly"],
+            "inverse",
+            f"{logistics['distance_to_polyurethane_km']} км",
+            "км",
+        )
+        score += poly_term["contribution"]
+        score_terms.append(poly_term)
+
+        energy_term = _build_score_term(
+            "Энерготариф",
+            econ["energy_tariff_rub_kwh"],
+            energy_values,
+            weights["energy"],
+            "inverse",
+            f"{econ['energy_tariff_rub_kwh']} руб/кВт·ч",
+            "руб/кВт·ч",
+        )
+        score += energy_term["contribution"]
+        score_terms.append(energy_term)
+
+        power_term = _build_score_term(
+            "Доступная мощность",
+            infra["available_power_kva"],
+            power_values,
+            weights["power"],
+            "direct",
+            f"{infra['available_power_kva']} кВА",
+            "кВА",
+        )
+        score += power_term["contribution"]
+        score_terms.append(power_term)
+
+        salary_term = _build_score_term(
+            "Средняя зарплата",
+            econ["average_salary_rub"],
+            salary_values,
+            weights["salary"],
+            "inverse",
+            f"{econ['average_salary_rub']} руб/мес",
+            "руб/мес",
+        )
+        score += salary_term["contribution"]
+        score_terms.append(salary_term)
+
+        rent_term = _build_score_term(
+            "Аренда 1-комн. квартиры",
+            social["rent_1room_apartment_rub"],
+            rent_values,
+            weights["rent"],
+            "inverse",
+            f"{social['rent_1room_apartment_rub']} руб/мес",
+            "руб/мес",
+        )
+        score += rent_term["contribution"]
+        score_terms.append(rent_term)
+
+        env_term = _build_score_term(
+            "Индекс городской среды",
+            social["city_environment_index"],
+            env_values,
+            weights["environment"],
+            "direct",
+            f"{social['city_environment_index']}",
+        )
+        score += env_term["contribution"]
+        score_terms.append(env_term)
+
+        oez_bonus = 5 if econ["has_oez_benefits"] else 0
+        insurance_bonus = 3 if econ["has_insurance_benefits"] else 0
+        railway_bonus = 2 if logistics["has_railway"] else 0
+
+        score += oez_bonus
+        score += insurance_bonus
+        score += railway_bonus
+
+        score_terms.append({
+            "label": "Льготы ОЭЗ",
+            "value": "есть" if econ["has_oez_benefits"] else "нет",
+            "normalized": None,
+            "weight": 0,
+            "contribution": round(oez_bonus, 2),
+            "explanation": "Постоянная надбавка за наличие льгот ОЭЗ",
+        })
+        score_terms.append({
+            "label": "Страховые льготы",
+            "value": "есть" if econ["has_insurance_benefits"] else "нет",
+            "normalized": None,
+            "weight": 0,
+            "contribution": round(insurance_bonus, 2),
+            "explanation": "Постоянная надбавка за наличие страховых льгот",
+        })
+        score_terms.append({
+            "label": "Ж/Д доступ",
+            "value": "есть" if logistics["has_railway"] else "нет",
+            "normalized": None,
+            "weight": 0,
+            "contribution": round(railway_bonus, 2),
+            "explanation": "Постоянная надбавка за наличие железной дороги",
+        })
+
         if score <= 0:
             continue
         results.append({
             "region": region,
             "score": round(score, 2),
-            "estimate": estimate
+            "estimate": estimate,
+            "score_breakdown": score_terms,
+            "score_formula": "Рейтинг = " + " + ".join(
+                [
+                    f"({term['normalized']} × {term['weight']})"
+                    if term["normalized"] is not None
+                    else f"{term['contribution']}"
+                    for term in score_terms
+                ]
+            ) + f" = {round(score, 2)}"
         })
     results = sorted(results, key=lambda x: x["score"], reverse=True)
     return results[:3]
