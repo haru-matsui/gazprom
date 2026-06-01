@@ -187,7 +187,9 @@ def create_pdf_bytes(presentation_html, slide_css):
             )
             slide_page.close()
             reader = PdfReader(BytesIO(slide_pdf))
-            for pdf_page in reader.pages:
+            for page_index, pdf_page in enumerate(reader.pages):
+                if page_index % 2 == 1:
+                    continue
                 writer.add_page(pdf_page)
 
         output = BytesIO()
