@@ -27,6 +27,8 @@ def render_score_formula(score_data, expanded=False):
     breakdown = score_data.get("score_breakdown", [])
     if not formula and not breakdown:
         return
+
+
     with st.expander("Как сформирован рейтинг", expanded=expanded):
         if formula:
             st.code(formula, language="text")
@@ -51,13 +53,13 @@ def render_score_formula(score_data, expanded=False):
 
 
 def _safe_filename(value, fallback="presentation"):
-        cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", str(value)).strip()
-        cleaned = re.sub(r"\s+", " ", cleaned)
-        return cleaned or fallback
+    cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", str(value)).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned or fallback
 
 
 def build_presentation_document(slide_css, slides_html, reset_script=""):
-        return f"""<!doctype html>
+    return f"""<!doctype html>
 <html lang="ru">
 <head>
     <meta charset="utf-8">
@@ -88,7 +90,7 @@ def build_presentation_document(slide_css, slides_html, reset_script=""):
                 break-inside: avoid !important;
                 page-break-inside: avoid !important;
                 page-break-after: avoid !important; /* Убираем всегда, так как слайды рендерятся по одному */
-                break-after: avoid !important;      /* Предотвращает появление пустой/разорванной второй страницы */
+                break-after: avoid !important;      /* Предотвращает появление пустой/р��зорванной второй страницы */
                 margin: 0 auto 0 auto !important;
                 box-shadow: none !important;
                 height: 562px !important;     /* Выравниваем высоту точно под размер страницы @page */
@@ -173,7 +175,8 @@ def create_pdf_bytes(presentation_html, slide_css):
 
         for index in range(slide_count):
             slide_html = slides.nth(index).evaluate("element => element.outerHTML")
-            single_slide_html = build_presentation_document(slide_css, f'<div class="presentation-wrapper">{slide_html}</div>')
+            single_slide_html = build_presentation_document(slide_css,
+                                                            f'<div class="presentation-wrapper">{slide_html}</div>')
             slide_page = browser.new_page(viewport={"width": 1400, "height": 900}, device_scale_factor=1)
             slide_page.set_content(single_slide_html, wait_until="networkidle")
             slide_page.emulate_media(media="print")
@@ -194,28 +197,31 @@ def create_pdf_bytes(presentation_html, slide_css):
 
 
 def create_pptx_bytes(presentation_html):
-        with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page(viewport={"width": 1200, "height": 900}, device_scale_factor=1)
-                page.set_content(presentation_html, wait_until="networkidle")
-                page.emulate_media(media="screen")
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1200, "height": 900}, device_scale_factor=1)
+        page.set_content(presentation_html, wait_until="networkidle")
+        page.emulate_media(media="screen")
 
-                slides = page.locator(".slide:not(.slide-end)")
-                slide_count = slides.count()
-                presentation = Presentation()
-                presentation.slide_width = Inches(13.333)
-                presentation.slide_height = Inches(7.5)
-                blank_layout = presentation.slide_layouts[6]
+        slides = page.locator(".slide:not(.slide-end)")
+        slide_count = slides.count()
+        presentation = Presentation()
+        presentation.slide_width = Inches(13.333)
+        presentation.slide_height = Inches(7.5)
+        blank_layout = presentation.slide_layouts[6]
 
-                for index in range(slide_count):
-                        slide = presentation.slides.add_slide(blank_layout)
-                        image_bytes = slides.nth(index).screenshot(type="png")
-                        slide.shapes.add_picture(BytesIO(image_bytes), 0, 0, width=presentation.slide_width, height=presentation.slide_height)
+        for index in range(slide_count):
+            slide = presentation.slides.add_slide(blank_layout)
+            image_bytes = slides.nth(index).screenshot(type="png")
+            slide.shapes.add_picture(BytesIO(image_bytes), 0, 0, width=presentation.slide_width,
+                                     height=presentation.slide_height)
 
-                output = BytesIO()
-                presentation.save(output)
-                browser.close()
-                return output.getvalue()
+        output = BytesIO()
+        presentation.save(output)
+        browser.close()
+        return output.getvalue()
+
+
 def generate_concept_board_openrouter(region_name, cultural_code):
     # API key must be provided via environment variable `OPENROUTER_API_KEY` or a .env file
     api_key = os.getenv("OPENROUTER_API_KEY")
@@ -283,10 +289,102 @@ def generate_concept_board_openrouter(region_name, cultural_code):
             base64_data = image_url_or_b64.split(",")[1]
             image_bytes = base64.b64decode(base64_data)
             return Image.open(BytesIO(image_bytes))
+        elif image_url_or_b64 and image_url_or_b64.startswith("http"):
+            img_res = requests.get(image_url_or_b64)
+            return Image.open(BytesIO(img_res.content))
     else:
         st.error(f"Ошибка API: {response.status_code} - {response.text}")
     return None
 
+
+def generate_photorealistic_collage(collage_img, concept_board_img, region_name, cultural_code):
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        st.error("API key not found. Set OPENROUTER_API_KEY in your environment.")
+        return None
+
+    model_name = "google/gemini-3.1-flash-image-preview"
+    style = cultural_code.get('architecture_style', '')
+    materials = cultural_code.get('materials', '')
+    colors = ", ".join(cultural_code.get('color_profile', []))
+
+    prompt = (
+        f"Style: {style}. Materials: {materials}. Colors: {colors}. "
+        f"Use the 4-panel 3D collage only as a geometric and compositional reference. "
+        f"Preserve: camera angles; framing; building shapes; object placement; scale and proportions. "
+        f"Do NOT preserve: rendering style; lighting quality; textures; materials; visual appearance. "
+        f"Transform the images from a raw 3D render into highly realistic architectural photography. "
+        f"The goal is NOT to improve the render. "
+        f"The goal is to replace the render look with a real-world photographic look while keeping the exact same architecture and viewpoints. "
+        f"Use the second provided image (concept board) as the primary source for: materials; facade finishes; colors; atmosphere; architectural character. "
+        f"Required result: indistinguishable from real photography; realistic construction materials; realistic glass; realistic metal panels; realistic concrete; realistic weathering; realistic vegetation (only if present in the original image); natural lighting; physically accurate shadows; professional architectural photography quality. "
+        f"Avoid: CGI look; 3D render look; game-engine look; visualization look; artificial materials; plastic surfaces; concept-art style. "
+        f"The final image should look like a photograph of a completed real-world industrial complex, captured by an architectural photographer. "
+        f"Keep the exact architecture and viewpoints. Replace the render appearance with photorealism."
+    )
+
+    def img_to_b64(img):
+        if img.mode == 'RGBA':
+            img = img.convert('RGB')
+        buffered = BytesIO()
+        img.save(buffered, format="JPEG")
+        return base64.b64encode(buffered.getvalue()).decode()
+
+    content = [{"type": "text", "text": prompt}]
+
+    if collage_img:
+        content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_to_b64(collage_img)}"}})
+    if concept_board_img:
+        content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_to_b64(concept_board_img)}"}})
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "HTTP-Referer": "https://localhost",
+        "X-Title": "Scoring App"
+    }
+    payload = {
+        "model": model_name,
+        "messages": [{"role": "user", "content": content}],
+        "modalities": ["image"],
+        "seed": 777
+    }
+
+    try:
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=60)
+        if response.status_code == 200:
+            data = response.json()
+            message = data["choices"][0]["message"]
+            image_url_or_b64 = None
+            if "images" in message and len(message["images"]) > 0:
+                img_data = message["images"][0]
+                if isinstance(img_data, dict) and "image_url" in img_data:
+                    image_url_or_b64 = img_data["image_url"]["url"]
+                elif isinstance(img_data, str):
+                    image_url_or_b64 = img_data
+            if not image_url_or_b64 and "content" in message:
+                cnt = message["content"]
+                match = re.search(r'(https?://[^\s\)]+)', cnt)
+                if match:
+                    image_url_or_b64 = match.group(1)
+                elif "data:image/" in cnt:
+                    start_idx = cnt.find("data:image/")
+                    end_chars = [cnt.find(")", start_idx), cnt.find('"', start_idx), cnt.find("'", start_idx)]
+                    valid_ends = [x for x in end_chars if x > start_idx]
+                    end_idx = min(valid_ends) if valid_ends else len(cnt)
+                    image_url_or_b64 = cnt[start_idx:end_idx]
+
+            if image_url_or_b64:
+                if "," in image_url_or_b64:
+                    base64_data = image_url_or_b64.split(",")[1]
+                    return Image.open(BytesIO(base64.b64decode(base64_data)))
+                elif image_url_or_b64.startswith("http"):
+                    img_res = requests.get(image_url_or_b64)
+                    return Image.open(BytesIO(img_res.content))
+        else:
+            st.error(f"Ошибка OpenRouter API: {response.text}")
+    except Exception as e:
+        st.error(f"Ошибка сети: {e}")
+    return None
 
 def load_factory_collage_image(max_attempts=12, delay_seconds=0.25):
     collage_url = "http://localhost:8000/renders/factory_collage.png"
@@ -356,8 +454,14 @@ def generate_collage_from_scene(three_js_data, viewpoints=None, out_dir="renders
             if saved_paths:
                 try:
                     collage_size = 1536
-                    thumb_size = collage_size // 2
-                    positions = [(0, 0), (thumb_size, 0), (0, thumb_size), (thumb_size, thumb_size)]
+                    border = 20
+                    thumb_size = (collage_size - 3 * border) // 2
+                    positions = [
+                        (border, border),
+                        (thumb_size + 2 * border, border),
+                        (border, thumb_size + 2 * border),
+                        (thumb_size + 2 * border, thumb_size + 2 * border)
+                    ]
                     collage = Image.new("RGB", (collage_size, collage_size), "white")
                     for idx, image_path in enumerate(saved_paths[:4]):
                         with Image.open(image_path) as source:
@@ -371,6 +475,8 @@ def generate_collage_from_scene(three_js_data, viewpoints=None, out_dir="renders
         return saved_paths
     except Exception:
         return []
+
+
 st.set_page_config(page_title="Подбор локации", layout="wide")
 st.title("Выбор оптимального региона для строительства")
 st.markdown("Внесите требуемые параметры для скоринга:")
@@ -379,9 +485,9 @@ if "concept_boards" not in st.session_state:
 if "four_renders" not in st.session_state:
     st.session_state["four_renders"] = {}
 if "3d_screenshots" not in st.session_state:
-    st.session_state["3d_screenshots"] = {} # Перевели в словарь по индексу вкладки
+    st.session_state["3d_screenshots"] = {}  # Перевели в словарь по индексу вкладки
 if "final_renders" not in st.session_state:
-    st.session_state["final_renders"] = {} # Перевели в словарь по индексу вкладки
+    st.session_state["final_renders"] = {}  # Перевели в словарь по индексу вкладки
 if "factory_collage" not in st.session_state:
     st.session_state["factory_collage"] = None
 col1, col2 = st.columns(2)
@@ -430,6 +536,7 @@ if st.button("Рассчитать оптимальные регионы", type=
     with st.spinner("Анализ данных..."):
         try:
             response = requests.post("http://localhost:8000/api/score", json=payload)
+            st.session_state["payload"] = payload  # Сохраняем введенные данные в состояние
             st.session_state["calculated"] = True
             st.session_state["top_regions"] = response.json().get("top_regions", [])
         except Exception as e:
@@ -446,6 +553,7 @@ if st.session_state.get("calculated", False):
         else:
             m = folium.Map(location=[54.0, 45.0], zoom_start=5)
         from branca.element import Element
+
         m.get_root().html.add_child(
             Element("<style>.leaflet-control-attribution { display: none !important; }</style>"))
         tabs = st.tabs([f"{i + 1}. {r['region']['name']}" for i, r in enumerate(top_regions)])
@@ -537,7 +645,7 @@ if st.session_state.get("calculated", False):
                     st.write(f"- **Площадь парковки:** {est.get('parking_area', 0):,} м²")
                     st.write(f"- **Площадь дорог:** {est.get('roads_area', 0):,} м²")
                     st.write("---")
-                    
+
                 # Полные таблицы CAPEX и OPEX на всю ширину
                 capex_bd = est.get('capex_breakdown', [])
                 opex_bd = est.get('opex_breakdown', {})
@@ -570,7 +678,8 @@ if st.session_state.get("calculated", False):
                         # Серый разделитель только на левой половине страницы
                         div_left, div_right = st.columns([1, 1])
                         with div_left:
-                            st.markdown('<div style="height:1px;background:#d0d0d0;margin:12px 0;width:100%;"></div>', unsafe_allow_html=True)
+                            st.markdown('<div style="height:1px;background:#d0d0d0;margin:12px 0;width:100%;"></div>',
+                                        unsafe_allow_html=True)
                         with div_right:
                             st.markdown('')
                     else:
@@ -613,35 +722,57 @@ if st.session_state.get("calculated", False):
                     with open("three_scene.html", "r", encoding="utf-8") as f:
                         html_template = f.read()
                     runtime_html_base = html_template.replace("__DATA_PLACEHOLDER__", json.dumps(three_js_data))
-                    # site-only: button to (re)generate collage by reloading the embedded scene
                 except FileNotFoundError:
                     st.error("Не удалось найти файл шаблона сцены `three_scene.html` в папке проекта.")
-                generate_pressed = st.button("Сгенерировать коллаж", key=f"generate_collage_{i}")
+
+                components.html(runtime_html_base, height=550, scrolling=False)
+
+                st.markdown("#### Коллаж завода")
+
+                is_concept_ready = i in st.session_state["concept_boards"] and st.session_state["concept_boards"][i] is not None
+                generate_pressed = st.button(
+                    "Сгенерировать коллаж",
+                    key=f"generate_collage_{i}",
+                    disabled=not is_concept_ready,
+                    help="Сначала требуется сгенерировать архитектурный концепт-борд (ниже)" if not is_concept_ready else "Сгенерировать фотореалистичный коллаж"
+                )
+
                 if generate_pressed:
                     # clear cached preview
-                    st.session_state["factory_collage"] = None
-                    with st.spinner("Сохраняем скриншоты локально..."):
+                    st.session_state[f"ai_collage_{i}"] = None
+                    with st.spinner("Сохраняем скриншоты и собираем базовый коллаж локально..."):
                         try:
                             saved = generate_collage_from_scene(three_js_data)
                             st.session_state["factory_collage_paths"] = saved
                             if saved:
                                 st.success(f"Сохранено {len(saved)} изображений в папке renders/")
-                                try:
-                                    st.image(saved[0], caption=os.path.basename(saved[0]), width=760)
-                                except Exception:
-                                    pass
                             else:
-                                st.error("Не удалось сохранить скриншоты. Проверьте three_scene.html и логи Playwright.")
+                                st.error(
+                                    "Не удалось сохранить скриншоты. Проверьте three_scene.html и логи Playwright.")
                         except Exception as e:
                             st.error(f"Ошибка сохранения скринов: {e}")
-                components.html(runtime_html_base, height=550, scrolling=False)
-                st.markdown("#### Коллаж завода")
-                if st.session_state["factory_collage"] is None:
-                    st.session_state["factory_collage"] = load_factory_collage_image()
-                if st.session_state["factory_collage"] is not None:
-                    st.image(st.session_state["factory_collage"], caption="Собранный коллаж завода", width=760)
-                else:
-                    st.info("Коллаж ещё сохраняется. Подождите секунду и обновите страницу.")
+
+                    time.sleep(1)
+                    base_collage = load_factory_collage_image(max_attempts=3, delay_seconds=0.5)
+                    if base_collage is not None:
+                        with st.spinner("Нейросеть генерирует фотореалистичный коллаж (это может занять около 30 секунд)..."):
+                            concept_path = st.session_state.get("concept_boards", {}).get(i)
+                            concept_img = None
+                            if concept_path and Path(concept_path).exists():
+                                concept_img = Image.open(concept_path)
+                            ai_collage = generate_photorealistic_collage(base_collage, concept_img, region_data['name'], region_data.get('cultural_code', {}))
+                            if ai_collage:
+                                st.session_state[f"ai_collage_{i}"] = ai_collage
+                                st.success("Фотореалистичный коллаж успешно сгенерирован!")
+                            else:
+                                st.error("Не удалось сгенерировать ИИ-коллаж, попробуйте еще раз.")
+                    else:
+                        st.error("Не удалось прочитать базовый коллаж, возможно он не успел сохраниться.")
+
+                ai_collage = st.session_state.get(f"ai_collage_{i}")
+                if ai_collage is not None:
+                    st.image(ai_collage, caption="Фотореалистичный коллаж завода (AI)", width=760)
+
                 st.markdown("---")
                 st.markdown("#### Архитектурный концепт-борд (AI Генерация)")
                 st.write(
@@ -656,15 +787,23 @@ if st.session_state.get("calculated", False):
                         with st.spinner("Нейросеть анализирует стиль и генерирует рендер..."):
                             try:
                                 img = generate_concept_board_openrouter(region_data['name'], cultural_code)
-                                st.session_state["concept_boards"][i] = img
+                                if img:
+                                    out_dir = Path("renders")
+                                    out_dir.mkdir(exist_ok=True)
+                                    concept_path = out_dir / f"concept_board_{i}.png"
+                                    img.save(concept_path, format="PNG")
+                                    st.session_state["concept_boards"][i] = str(concept_path)
+                                    st.rerun()
                             except Exception as e:
                                 st.error(f"Ошибка: {e}")
                     if i in st.session_state["concept_boards"] and st.session_state["concept_boards"][i] is not None:
-                        empty_left, img_container, empty_right = st.columns([1, 2, 1])
-                        with img_container:
-                            st.image(st.session_state["concept_boards"][i],
-                                     caption=f"Концепт-борд: {region_data['name']}",
-                                     width=500)
+                        concept_path = st.session_state["concept_boards"][i]
+                        if Path(concept_path).exists():
+                            empty_left, img_container, empty_right = st.columns([1, 2, 1])
+                            with img_container:
+                                st.image(concept_path,
+                                         caption=f"Концепт-борд: {region_data['name']}",
+                                         width=500)
         st.markdown("### Карта рекомендованных площадок")
         st_folium(m, width=900, height=400)
         st.markdown("---")
@@ -874,20 +1013,14 @@ if st.session_state.get("calculated", False):
 <div class="slide-col">
 <h3 class="section-title">Масштаб строительства</h3>
 <div class="list-group">
-<div class="list-item"><strong>Площадь цеха:</strong> <span>{top1_est['shop_area']:,} м²</span></div>
-<div class="list-item"><strong>Площадь складов:</strong> <span>{top1_est['warehouse_area']:,} м²</span></div>
-<div class="list-item"><strong>CAPEX:</strong> <span style="color:#0056A4; font-weight:bold;">{top1_est['capex']:,} руб.</span></div>
-</div>
-<div class="list-group" style="margin-top:12px;">
-<div class="list-item"><strong>Площадь столовой:</strong> <span>{top1_est.get('canteen_area', 0):,} м²</span></div>
-<div class="list-item"><strong>Площадь медпункта:</strong> <span>{top1_est.get('medical_area', 0):,} м²</span></div>
-<div class="list-item"><strong>Площадь парковки:</strong> <span>{top1_est.get('parking_area', 0):,} м²</span></div>
-<div class="list-item"><strong>Площадь дорог:</strong> <span>{top1_est.get('roads_area', 0):,} м²</span></div>
+<div class="list-item" style="margin-bottom: 10px;"><strong>Цех и склады:</strong> <span>{top1_est['shop_area']:,} м² / {top1_est['warehouse_area']:,} м²</span></div>
+<div class="list-item" style="margin-bottom: 10px;"><strong>Доп. инфраструктура:</strong> <span>{top1_est.get('canteen_area', 0) + top1_est.get('medical_area', 0) + top1_est.get('parking_area', 0) + top1_est.get('roads_area', 0):,} м²</span></div>
+<div class="list-item" style="margin-bottom: 10px;"><strong>CAPEX:</strong> <span style="color:#0056A4; font-weight:bold;">{top1_est['capex']:,} руб.</span></div>
 </div>
 <h3 class="section-title" style="margin-top: 20px;">Архитектура и среда</h3>
 <div class="list-group">
-<div class="list-item"><strong>Стиль:</strong> <span>{user_req.get('architecture_priority', 'Не указано')}</span></div>
-<div class="list-item"><strong>Благоустройство:</strong> <span>{', '.join(user_req.get('landscaping', []))}</span></div>
+<div class="list-item" style="margin-bottom: 10px;"><strong>Стиль:</strong> <span>{user_req.get('architecture_priority', 'Не указано')}</span></div>
+<div class="list-item" style="margin-bottom: 10px;"><strong>Благоустройство:</strong> <span>{', '.join(user_req.get('landscaping', []))}</span></div>
 </div>
 </div>
 </div>
@@ -946,16 +1079,6 @@ if st.session_state.get("calculated", False):
 <h4>Собственные соц. объекты (сад, жилье)</h4>
 <p style="font-size: 22px;">{"Не требуются" if soc_area == 0 else f"Площадь: {soc_area:,} м²"}</p>
 </div>
-</div>
-</div>
-</div>
-<div class="slide slide-end">
-<div class="slide-header">Конец презентации</div>
-<div class="slide-body">
-<div>
-<div class="end-badge">Финальный слайд</div>
-<div class="end-title">Спасибо за внимание</div>
-<p class="end-text">Презентация завершена. Ниже можно скачать PDF и PPTX</p>
 </div>
 </div>
 </div>
