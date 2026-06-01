@@ -515,7 +515,7 @@ grassMap.anisotropy = 2;
       }
       g.position.set(x, 0, z);
       g.rotation.y = rotY;
-      g.scale.set(3, 3, 3);
+      g.scale.set(1, 1, 1);
       g.castShadow=true; g.receiveShadow=true;
       factoryZone.add(g);
       return g;
@@ -568,7 +568,7 @@ grassMap.anisotropy = 2;
 
       g.position.set(x, 0, z);
       g.rotation.y = rotY;
-      g.scale.set(2.5, 2.5, 2.5);
+      g.scale.set(1.0, 1.0, 1.0);
       g.castShadow=true; g.receiveShadow=true; factoryZone.add(g); return g;
     }
 
@@ -1087,7 +1087,7 @@ grassMap.anisotropy = 2;
     });
     const warehouse = createFactoryBuilding({
       w: whW, l: whL, h: 18,
-      x: shopX + shopW/2 + whW/2 + 50, z: shopZ - 40,
+      x: shopX + shopW/2 + whW/2 + 90, z: shopZ - 40,
       color: data.color_palette[1] || "#4a5568",
       name: "Склад + Логистика",
       docks: 0
@@ -1443,3 +1443,4 @@ grassMap.anisotropy = 2;
   </script>
 </body>
 </html>
+

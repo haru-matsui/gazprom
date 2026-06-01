@@ -33,7 +33,7 @@ def calculate_estimate(region, user_input, required_power):
     # Склад: цех * 0.35
     warehouse_area = shop_area * 0.35
     # АБК: цех * 0.02
-    abk_area = shop_area * 0.02
+    abk_area = shop_area * 0.04
     housing_percent = user_input["housing"]["percent"] / 100
     housing_type = user_input["housing"]["type"]
     if housing_type == "общежитие":
